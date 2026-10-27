@@ -149,8 +149,15 @@ void app_main(void)
         const int64_t physics_us = esp_timer_get_time() - start;
 
         frame_clear(&frame);
-        for (int i = 0; i < fluid.n; i++) {
-            frame_set(&frame, fluid_cell(&fluid, i), color);
+        for (uint8_t z = 0; z < CUBE_SIZE; z++) {
+            for (uint8_t y = 0; y < CUBE_SIZE; y++) {
+                for (uint8_t x = 0; x < CUBE_SIZE; x++) {
+                    const cell_t c = {x, y, z};
+                    if (fluid_lit(&fluid, c)) {
+                        frame_set(&frame, c, color);
+                    }
+                }
+            }
         }
         xQueueSend(s_frames, &frame, portMAX_DELAY);
         const int64_t frame_us = esp_timer_get_time() - start;
