@@ -3,7 +3,7 @@
 Firmware for an 8x8x8 LED cube whose particles fall the way the cube is
 tilted. Tilt it and the fluid flows downhill; shake it and the fluid
 sloshes; spin it and the fluid swirls against the spin and out to the
-walls. A double tap switches to a flock of boids and back.
+walls. A double tap gives the fluid a new, random colour.
 
 It runs on an ESP32-S3 (LilyGO T-Display-S3) with an MPU-6500 IMU and
 six 8x8 WS2812 panels, and is written in C for ESP-IDF 6.1. The physics is
@@ -78,14 +78,14 @@ idf.py -p /dev/ttyACM0 flash monitor
 ```
 
 At power on, each panel lights green for 2 seconds in chain order (Left,
-Back, Right, Front, Bottom, Top) before the effects start. A dark panel
+Back, Right, Front, Bottom, Top) before the fluid starts. A dark panel
 is dead or badly connected; if every panel from one point on stays dark,
 the chain is broken at the link before the first dark one.
 
 Keep the cube still from the end of the panel test until a second later:
 the gyro calibrates its zero offset then.
 
-The monitor logs a status line every 100 frames: effect, acceleration,
+The monitor logs a status line every 100 frames: acceleration,
 rotation rate, and the physics, frame and LED send times.
 
 ## Settings
@@ -97,11 +97,11 @@ rotation rate, and the physics, frame and LED send times.
 | LED data GPIO | 2 | |
 | Panel test at power on | on | Each panel green for 2 s, in chain order |
 | Physics step period | 12 ms | The physics constants are per step; 12 ms is the LED chain's refresh time |
-| Tap threshold | 1000 mg | Raise it if sloshing switches effects, lower it if taps are missed |
+| Tap threshold | 1000 mg | Raise it if sloshing changes the colour, lower it if taps are missed |
 | IMU SPI pins | 11, 13, 12, 10 | MOSI, MISO, SCLK, CS |
 | I2C scan at startup | off | Wiring check: probes the IMU pins as I2C; finds the MPU-6500 at 0x68/0x69 after a power on |
 
-Particle counts and colours are in [`main/core/config.h`](main/core/config.h).
+The particle count and colour are in [`main/core/config.h`](main/core/config.h).
 
 ## How it works
 
@@ -109,8 +109,8 @@ Particle counts and colours are in [`main/core/config.h`](main/core/config.h).
 flowchart LR
     IMU[MPU-6500 FIFO<br/>250 Hz] --> TAP[tap detector]
     IMU --> MF[motion filter]
-    TAP -->|double tap| FX
-    MF -->|gravity + amplified motion| FX[effect step<br/>fluid or boids]
+    TAP -->|double tap: random hue| FB
+    MF -->|gravity + amplified motion| FX[fluid step]
     IMU -->|gyro, integrated| FX
     FX --> FB[frame builder]
     FB -->|queue| LED[LED task<br/>core 1, led_strip]
@@ -136,8 +136,10 @@ not overshoot.
 **Double tap.** The MPU-6500 has no tap engine outside its DMP, so taps
 are found in software on the raw samples: a jump of more than the
 threshold between two samples, after at least 30 ms of stillness, counts
-as a tap; a second tap within 375 ms switches the effect. Shaking never
-has the stillness, so it does not switch.
+as a tap; a second tap within 375 ms picks a random hue at least 60°
+from the current one. Shaking never has the stillness, so it does not
+change the colour. Every hue's channels add up to 60/255, so the cube
+draws the same current in any colour.
 
 **Fluid.** Particles have continuous positions. Each step integrates
 velocity, moves every particle, then pushes overlapping particles apart in
@@ -147,9 +149,6 @@ particle's LED only moves once the particle is more than 0.65 cells from
 its cell's centre, so a settled pile does not flicker. Spinning the cube
 makes the fluid lag against the spin and flings it outwards.
 
-**Boids.** 32 boids follow separation, alignment and cohesion, are blown
-by tilt, and are swept round when the cube spins.
-
 ## Code layout
 
 | Path | |
@@ -157,7 +156,7 @@ by tilt, and are swept round when the cube spins.
 | `main/main.c` | Main loop on core 0, LED task on core 1 |
 | `main/mpu6500.c` | MPU-6500 over SPI: setup, gyro calibration, FIFO reads |
 | `main/ws2812.c` | WS2812 chain through the `espressif/led_strip` component (RMT) |
-| `main/core/` | Everything that needs no hardware: effects, motion filter, tap detector, panel map, IMU sample decoding |
+| `main/core/` | Everything that needs no hardware: fluid, colours, motion filter, tap detector, panel map, IMU sample decoding |
 | `test/host/` | Unity tests for `main/core`, run on the host |
 
 ## Tests

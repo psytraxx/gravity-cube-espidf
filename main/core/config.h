@@ -1,4 +1,4 @@
-/* Cube geometry and the per-effect settings: particle count and colour. */
+/* Cube geometry and the fluid's particle count and colour. */
 #pragma once
 
 #include <stdint.h>
@@ -14,16 +14,11 @@ typedef struct {
     uint8_t r, g, b;
 } color_t;
 
-/* Fluid: half the cube full. Dim green only: a single channel draws a
- * fraction of the current of white, and the eye is most sensitive to green,
- * so it stays visible at a low level. */
+/* Fluid: half the cube full, starting green. A double tap picks a random
+ * hue; its channels always add up to FLUID_LEVEL, so every colour draws
+ * the current of one channel at 60/255, a fraction of white's. */
 #define FLUID_PARTICLES 256
-#define FLUID_COLOR     ((color_t){0, 60, 0})
+#define FLUID_LEVEL     60
+#define FLUID_HUE       120
 
-/* A few dozen boids read as a flock; dim amber so a double tap visibly
- * changes the cube. */
-#define BOIDS_PARTICLES 32
-#define BOIDS_COLOR     ((color_t){40, 20, 0})
-
-/* Largest particle count of any effect. */
 #define MAX_PARTICLES FLUID_PARTICLES

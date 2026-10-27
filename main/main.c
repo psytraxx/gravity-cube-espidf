@@ -7,9 +7,11 @@
  * sends the current one, and only waits if core 1 is still busy. */
 #include <math.h>
 
-#include "effect.h"
+#include "color.h"
 #include "esp_log.h"
+#include "esp_random.h"
 #include "esp_timer.h"
+#include "fluid.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
@@ -93,15 +95,17 @@ void app_main(void)
                       "Running with gravity towards z == 0, no spin or taps.");
     }
 
-    static effect_t effect;
-    effect_init(&effect);
-    ESP_LOGI(TAG, "%d fluid particles, %d boids; double-tap the cube to switch",
-             FLUID_PARTICLES, BOIDS_PARTICLES);
+    static fluid_t fluid;
+    fluid_init(&fluid);
+    fluid_populate(&fluid, FLUID_PARTICLES);
+    ESP_LOGI(TAG, "%d fluid particles; double-tap the cube to change colour", FLUID_PARTICLES);
+    uint32_t hue = FLUID_HUE;
+    color_t color = color_from_hue(hue);
 
-    motion_filter_t motion;
-    motion_filter_init(&motion, MOTION_SMOOTHING, MOTION_GAIN);
     tap_detector_t taps;
     tap_init(&taps, CONFIG_CUBE_TAP_THRESHOLD_MG / 1000.0f);
+    motion_filter_t motion;
+    motion_filter_init(&motion, MOTION_SMOOTHING, MOTION_GAIN);
 
     static imu_sample_t samples[MAX_SAMPLES];
     static frame_t frame;
@@ -126,8 +130,11 @@ void app_main(void)
             for (int i = 0; i < n; i++) {
                 sample_ms += MPU6500_SAMPLE_MS;
                 if (tap_feed(&taps, samples[i].accel, sample_ms)) {
-                    effect_next(&effect);
-                    ESP_LOGI(TAG, "Double tap: switched to %s", effect_name(&effect));
+                    /* At least 60 degrees from the last hue, so the change shows. */
+                    hue = (hue + 60 + esp_random() % 241) % 360;
+                    color = color_from_hue(hue);
+                    ESP_LOGI(TAG, "Double tap: hue %lu, RGB (%u, %u, %u)", (unsigned long)hue,
+                             color.r, color.g, color.b);
                 }
                 sum = v3_add(sum, samples[i].accel);
                 rotation = v3_add(rotation, v3_scale(samples[i].gyro, MPU6500_SAMPLE_MS / 1000.0f));
@@ -137,23 +144,22 @@ void app_main(void)
         }
 
         const int64_t start = esp_timer_get_time();
-        effect_set_rotation(&effect, rotation);
-        effect_step(&effect, motion_filter_apply(&motion, accel, rotation));
+        fluid_set_rotation(&fluid, rotation);
+        fluid_step(&fluid, motion_filter_apply(&motion, accel, rotation));
         const int64_t physics_us = esp_timer_get_time() - start;
 
         frame_clear(&frame);
-        const color_t color = effect_color(&effect);
-        for (int i = 0; i < effect_count(&effect); i++) {
-            frame_set(&frame, effect_cell(&effect, i), color);
+        for (int i = 0; i < fluid.n; i++) {
+            frame_set(&frame, fluid_cell(&fluid, i), color);
         }
         xQueueSend(s_frames, &frame, portMAX_DELAY);
         const int64_t frame_us = esp_timer_get_time() - start;
 
         if (++loops % LOG_EVERY == 0) {
             ESP_LOGI(TAG,
-                     "Loop %lu: %s, accel (%.2f, %.2f, %.2f) |%.2f| g, gyro (%.2f, %.2f, %.2f) rad/s, "
+                     "Loop %lu: accel (%.2f, %.2f, %.2f) |%.2f| g, gyro (%.2f, %.2f, %.2f) rad/s, "
                      "physics %lld us, frame %lld us, LED send %lld us",
-                     (unsigned long)loops, effect_name(&effect), accel.x, accel.y, accel.z,
+                     (unsigned long)loops, accel.x, accel.y, accel.z,
                      v3_len(accel), gyro_rate.x, gyro_rate.y, gyro_rate.z, physics_us, frame_us,
                      s_led_send_us);
         }

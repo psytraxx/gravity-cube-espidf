@@ -21,7 +21,7 @@ config CUBE_PANEL_TEST
     bool "Panel test at power on"
     default y
     help
-        Before the effects start, light each panel green for 2 seconds in
+        Before the fluid starts, light each panel green for 2 seconds in
         chain order (Left, Back, Right, Front, Bottom, Top), so a dead
         panel or a broken link in the chain shows up straight away: every
         panel after a break stays dark.
@@ -32,11 +32,9 @@ config CUBE_TAP_THRESHOLD_MG
     range 300 4000
     help
         Jump in acceleration between two samples (4 ms apart) that counts
-        as a tap. Raise it if sloshing the fluid switches effects, lower it
-        if double taps are missed.
+        as a tap. Raise it if sloshing the fluid changes its colour, lower
+        it if double taps are missed.
 
-# The IMU defaults are the T-Display-S3's labelled SPI header (GPIO 10-13),
-# clear of its LCD pins.
 config CUBE_IMU_SPI_MOSI
     int "SPI MOSI GPIO (board SDA/SDI)"
     default 11
