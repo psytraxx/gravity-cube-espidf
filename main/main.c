@@ -32,6 +32,9 @@ static const char *TAG = "cube";
 
 #define LOG_EVERY 100
 
+#define PANEL_TEST_MS    2000
+#define PANEL_TEST_COLOR ((color_t){0, 60, 0})
+
 /* Frames from core 0 to core 1. One slot. */
 static QueueHandle_t s_frames;
 /* Duration of the last LED send, for the status log. */
@@ -55,12 +58,33 @@ static void led_task(void *arg)
     }
 }
 
+#if CONFIG_CUBE_PANEL_TEST
+/* Each panel green in turn, chain order; then all off. */
+static void panel_test(void)
+{
+    static frame_t frame;
+    for (int p = 0; p < PANEL_COUNT; p++) {
+        ESP_LOGI(TAG, "Panel test: %d %s", p, panel_name(p));
+        frame_clear(&frame);
+        frame_fill_panel(&frame, p, PANEL_TEST_COLOR);
+        xQueueSend(s_frames, &frame, portMAX_DELAY);
+        vTaskDelay(pdMS_TO_TICKS(PANEL_TEST_MS));
+    }
+    frame_clear(&frame);
+    xQueueSend(s_frames, &frame, portMAX_DELAY);
+}
+#endif
+
 void app_main(void)
 {
     ESP_LOGI(TAG, "Gravity cube, %dx%dx%d", CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
 
     s_frames = xQueueCreate(1, sizeof(frame_t));
     xTaskCreatePinnedToCore(led_task, "leds", 4096, NULL, 5, NULL, 1);
+
+#if CONFIG_CUBE_PANEL_TEST
+    panel_test();
+#endif
 
     /* Calibrates the gyro, so the cube should be still. */
     const bool have_imu = mpu6500_init() == ESP_OK;

@@ -5,10 +5,8 @@ config CUBE_LED_GPIO
     default 2
     help
         Data line of the WS2812 chain, through a 74AHCT125 level shifter
-        and a 330 ohm series resistor. GPIO 2 is WLED's default LED pin on
-        the ESP32. It is also a boot strapping pin: it must not be pulled
-        high while the chip resets into download mode, which a level
-        shifter input does not do.
+        and a 330 ohm series resistor. GPIO 2 is on the T-Display-S3's
+        header and is not a strapping pin on the ESP32-S3.
 
 config CUBE_FRAME_MS
     int "Physics step period (ms)"
@@ -19,6 +17,15 @@ config CUBE_FRAME_MS
         so a longer period slows the fluid down. 12 ms is the rate the LED
         chain can be refreshed at (384 LEDs take ~11.5 ms).
 
+config CUBE_PANEL_TEST
+    bool "Panel test at power on"
+    default y
+    help
+        Before the effects start, light each panel green for 2 seconds in
+        chain order (Left, Back, Right, Front, Bottom, Top), so a dead
+        panel or a broken link in the chain shows up straight away: every
+        panel after a break stays dark.
+
 config CUBE_TAP_THRESHOLD_MG
     int "Tap threshold (mg)"
     default 1000
@@ -28,20 +35,33 @@ config CUBE_TAP_THRESHOLD_MG
         as a tap. Raise it if sloshing the fluid switches effects, lower it
         if double taps are missed.
 
+# The IMU defaults are the T-Display-S3's labelled SPI header (GPIO 10-13),
+# clear of its LCD pins.
 config CUBE_IMU_SPI_MOSI
     int "SPI MOSI GPIO (board SDA/SDI)"
-    default 23
+    default 11
 
 config CUBE_IMU_SPI_MISO
     int "SPI MISO GPIO (board AD0/SDO)"
-    default 19
+    default 13
 
 config CUBE_IMU_SPI_SCLK
     int "SPI SCLK GPIO (board SCL)"
-    default 18
+    default 12
 
 config CUBE_IMU_SPI_CS
     int "SPI CS GPIO (board NCS)"
-    default 5
+    default 10
+
+config CUBE_IMU_I2C_SCAN
+    bool "Scan for I2C devices on the IMU pins at startup"
+    default n
+    help
+        Wiring check: before setting up SPI, hold NCS high (which puts the
+        MPU-6500 on I2C) and probe every address with SCL on the SCLK pin
+        and SDA on the MOSI pin. An MPU-6500 answers at 0x68 (AD0 low) or
+        0x69 (AD0 high). The SPI setup turns the chip's I2C interface off
+        until it is power cycled, so the scan only finds it after a power
+        on, not after a reset.
 
 endmenu

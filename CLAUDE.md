@@ -4,8 +4,9 @@ Project guidance for Claude Code working in this repository.
 
 ## What this is
 
-ESP-IDF 6.1 firmware in C for an 8x8x8 WS2812 LED cube on a plain ESP32
-with an MPU-6500 IMU. README.md describes the hardware, wiring and design.
+ESP-IDF 6.1 firmware in C for an 8x8x8 WS2812 LED cube on an ESP32-S3
+(LilyGO T-Display-S3) with an MPU-6500 IMU. README.md describes the
+hardware, wiring and design.
 
 ## Layout
 

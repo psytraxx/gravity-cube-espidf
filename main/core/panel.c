@@ -9,10 +9,10 @@
 typedef enum {
     FACE_EAST,  /* x == 0 */
     FACE_WEST,  /* x == 7 */
-    FACE_SOUTH, /* y == 7 */
-    FACE_NORTH, /* y == 0 */
-    FACE_UP,    /* z == 0 */
-    FACE_DOWN,  /* z == 7 */
+    FACE_NORTH, /* y == 7 */
+    FACE_SOUTH, /* y == 0 */
+    FACE_DOWN,  /* z == 0 */
+    FACE_UP,    /* z == 7 */
     FACE_COUNT,
 } face_t;
 
@@ -23,12 +23,12 @@ typedef struct {
 } panel_t;
 
 static const panel_t PANELS[FACE_COUNT] = {
-    [FACE_EAST] = {.chain = 0, .rotation = 0, .invert_x = true, .invert_y = true},   /* Left */
-    [FACE_NORTH] = {.chain = 1, .rotation = 0, .invert_x = false, .invert_y = true}, /* Front */
-    [FACE_WEST] = {.chain = 2, .rotation = 0, .invert_x = false, .invert_y = true},  /* Right */
-    [FACE_SOUTH] = {.chain = 3, .rotation = 0, .invert_x = true, .invert_y = true},  /* Back */
-    [FACE_UP] = {.chain = 4, .rotation = 0, .invert_x = false, .invert_y = false},   /* Top */
-    [FACE_DOWN] = {.chain = 5, .rotation = 90, .invert_x = false, .invert_y = true}, /* Bottom */
+    [FACE_EAST] = {.chain = 0, .rotation = 270, .invert_x = false, .invert_y = false}, /* Left */
+    [FACE_SOUTH] = {.chain = 1, .rotation = 270, .invert_x = false, .invert_y = true}, /* Back */
+    [FACE_WEST] = {.chain = 2, .rotation = 270, .invert_x = false, .invert_y = true},  /* Right */
+    [FACE_NORTH] = {.chain = 3, .rotation = 270, .invert_x = false, .invert_y = false}, /* Front */
+    [FACE_DOWN] = {.chain = 4, .rotation = 0, .invert_x = false, .invert_y = false},  /* Bottom */
+    [FACE_UP] = {.chain = 5, .rotation = 90, .invert_x = false, .invert_y = true},    /* Top */
 };
 
 static uint16_t led_index(face_t face, uint8_t x, uint8_t y)
@@ -57,6 +57,10 @@ static uint16_t led_index(face_t face, uint8_t x, uint8_t y)
     if (p->invert_y) {
         py = LAST - py;
     }
+    /* Zigzag: odd rows run backwards. */
+    if (py & 1) {
+        px = LAST - px;
+    }
     return (uint16_t)(p->chain * N * N + px + py * N);
 }
 
@@ -70,16 +74,16 @@ int panel_leds(cell_t c, uint16_t leds[3])
         leds[n++] = led_index(FACE_WEST, c.y, c.z);
     }
     if (c.y == LAST) {
-        leds[n++] = led_index(FACE_SOUTH, c.x, c.z);
-    }
-    if (c.y == 0) {
         leds[n++] = led_index(FACE_NORTH, c.x, c.z);
     }
+    if (c.y == 0) {
+        leds[n++] = led_index(FACE_SOUTH, c.x, c.z);
+    }
     if (c.z == 0) {
-        leds[n++] = led_index(FACE_UP, c.x, c.y);
+        leds[n++] = led_index(FACE_DOWN, c.x, c.y);
     }
     if (c.z == LAST) {
-        leds[n++] = led_index(FACE_DOWN, c.x, c.y);
+        leds[n++] = led_index(FACE_UP, c.x, c.y);
     }
     return n;
 }
@@ -99,4 +103,21 @@ void frame_set(frame_t *f, cell_t cell, color_t color)
         px[1] = color.g;
         px[2] = color.b;
     }
+}
+
+void frame_fill_panel(frame_t *f, int panel, color_t color)
+{
+    for (int i = panel * PANEL_LEDS; i < (panel + 1) * PANEL_LEDS; i++) {
+        uint8_t *px = &f->rgb[i * 3];
+        px[0] = color.r;
+        px[1] = color.g;
+        px[2] = color.b;
+    }
+}
+
+const char *panel_name(int panel)
+{
+    static const char *const names[PANEL_COUNT] = {"Left",  "Back",   "Right",
+                                                   "Front", "Bottom", "Top"};
+    return names[panel];
 }

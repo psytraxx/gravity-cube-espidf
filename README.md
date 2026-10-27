@@ -5,15 +5,16 @@ tilted. Tilt it and the fluid flows downhill; shake it and the fluid
 sloshes; spin it and the fluid swirls against the spin and out to the
 walls. A double tap switches to a flock of boids and back.
 
-It runs on a plain ESP32 with an MPU-6500 IMU and six 8x8 WS2812 panels,
-and is written in C for ESP-IDF 6.1. The physics is a port of the fluid
-solver in [gravity-cube-rs](https://github.com/psytraxx/gravity-cube-rs).
+It runs on an ESP32-S3 (LilyGO T-Display-S3) with an MPU-6500 IMU and
+six 8x8 WS2812 panels, and is written in C for ESP-IDF 6.1. The physics is
+a port of the fluid solver in
+[gravity-cube-rs](https://github.com/psytraxx/gravity-cube-rs).
 
 ## Hardware
 
 | Part | Notes |
 |---|---|
-| ESP32 dev board | Any plain ESP32 (dual core, 4 MB flash) |
+| LilyGO T-Display-S3 | ESP32-S3, 16 MB flash; its LCD is not used |
 | MPU-6500 breakout | 3–5 V supply (on-board LDO), wired for SPI |
 | 6 × 8x8 WS2812B panels | 384 LEDs in one chain |
 | 74AHCT125 | 3.3 V to 5 V level shifter for the LED data line |
@@ -24,21 +25,19 @@ solver in [gravity-cube-rs](https://github.com/psytraxx/gravity-cube-rs).
 
 ### LEDs
 
-| ESP32 | Goes to |
+| T-Display-S3 | Goes to |
 |---|---|
 | GPIO 2 | 74AHCT125 input → 330 Ω → DIN of panel 0 |
 
-GPIO 2 is WLED's default LED pin on the ESP32. It is also a strapping pin:
-it must not be pulled high while the ESP32 resets into download mode,
-which a level shifter input does not do.
-
-The panels chain OUT to IN. Each has IN at its bottom-left and scans row
-by row to OUT at its top-right:
+The panels are zigzag wired and chain OUT to IN. The four side panels run
+round the cube: each has IN at the bottom of the edge it shares with the
+previous panel, runs up the first column, down the next and so on, to OUT
+at the bottom of the edge with the next one:
 
 ```mermaid
 flowchart LR
-    ESP[GPIO 2] --> P0["0 Left (x = 0)"] --> P1["1 Front (y = 0)"] --> P2["2 Right (x = 7)"]
-    P2 --> P3["3 Back (y = 7)"] --> P4["4 Top (z = 0)"] --> P5["5 Bottom (z = 7)"]
+    ESP[GPIO 2] --> P0["0 Left (x = 0)"] --> P1["1 Back (y = 0)"] --> P2["2 Right (x = 7)"]
+    P2 --> P3["3 Front (y = 7)"] --> P4["4 Bottom (z = 0)"] --> P5["5 Top (z = 7)"]
 ```
 
 The per-panel rotation and mirroring is in
@@ -46,14 +45,17 @@ The per-panel rotation and mirroring is in
 
 ### MPU-6500 (SPI)
 
-| MPU-6500 board | ESP32 |
+The IMU uses the board's labelled SPI header, which is clear of the LCD
+pins:
+
+| MPU-6500 board | T-Display-S3 |
 |---|---|
-| VCC | 3V3 (or 5 V) |
+| VCC | 3V |
 | GND | GND |
-| SCL (SCLK) | GPIO 18 |
-| SDA (SDI / MOSI) | GPIO 23 |
-| AD0 (SDO / MISO) | GPIO 19 |
-| NCS | GPIO 5 |
+| SCL (SCLK) | GPIO 12 (SPI_CLK) |
+| SDA (SDI / MOSI) | GPIO 11 (SPI_D) |
+| AD0 (SDO / MISO) | GPIO 13 (SPI_Q) |
+| NCS | GPIO 10 (SPI_CS) |
 
 SPI runs at 1 MHz, against 400 kHz for the board's I2C interface, so a
 frame's FIFO read takes a fraction of the time. The pins are settable in
@@ -68,16 +70,20 @@ if tilting moves the fluid the wrong way on an axis, flip that axis' sign.
 
 ## Build and flash
 
-ESP-IDF 6.1 ([install guide](https://docs.espressif.com/projects/esp-idf/en/v6.1/esp32/get-started/)):
+ESP-IDF 6.1 ([install guide](https://docs.espressif.com/projects/esp-idf/en/v6.1/esp32s3/get-started/)):
 
 ```bash
-idf.py set-target esp32   # once
 idf.py build
-idf.py -p /dev/ttyUSB0 flash monitor
+idf.py -p /dev/ttyACM0 flash monitor
 ```
 
-Keep the cube still for the first second after reset: the gyro
-calibrates its zero offset then.
+At power on, each panel lights green for 2 seconds in chain order (Left,
+Back, Right, Front, Bottom, Top) before the effects start. A dark panel
+is dead or badly connected; if every panel from one point on stays dark,
+the chain is broken at the link before the first dark one.
+
+Keep the cube still from the end of the panel test until a second later:
+the gyro calibrates its zero offset then.
 
 The monitor logs a status line every 100 frames: effect, acceleration,
 rotation rate, and the physics, frame and LED send times.
@@ -89,9 +95,11 @@ rotation rate, and the physics, frame and LED send times.
 | Setting | Default | |
 |---|---|---|
 | LED data GPIO | 2 | |
+| Panel test at power on | on | Each panel green for 2 s, in chain order |
 | Physics step period | 12 ms | The physics constants are per step; 12 ms is the LED chain's refresh time |
 | Tap threshold | 1000 mg | Raise it if sloshing switches effects, lower it if taps are missed |
-| IMU SPI pins | 23, 19, 18, 5 | MOSI, MISO, SCLK, CS |
+| IMU SPI pins | 11, 13, 12, 10 | MOSI, MISO, SCLK, CS |
+| I2C scan at startup | off | Wiring check: probes the IMU pins as I2C; finds the MPU-6500 at 0x68/0x69 after a power on |
 
 Particle counts and colours are in [`main/core/config.h`](main/core/config.h).
 

@@ -1,12 +1,14 @@
 /* Maps voxels on the cube's surface to LEDs in the chain, and builds
  * frames.
  *
- * Six 8x8 panels, chained OUT to IN in the WLED wiring: every panel has IN
- * at its bottom-left and scans row by row up to OUT at the top-right. Faces
- * are named as in the unfolded cross (Front = North):
+ * Six 8x8 zigzag panels, chained OUT to IN in the WLED wiring. The four
+ * side panels run round the cube: each has IN at the bottom of the edge
+ * it shares with the previous panel, runs up the first column, down the
+ * next and so on, to OUT at the bottom of the edge with the next one. Faces are named
+ * as in the unfolded cross (Front = North):
  *
- *   0 Left (x == 0), 1 Front (y == 0), 2 Right (x == 7), 3 Back (y == 7),
- *   4 Top (z == 0), 5 Bottom (z == 7)
+ *   0 Left (x == 0), 1 Back (y == 0), 2 Right (x == 7), 3 Front (y == 7),
+ *   4 Bottom (z == 0), 5 Top (z == 7)
  *
  * A voxel on an edge or corner lights an LED on every face it touches;
  * inner voxels light nothing. */
@@ -16,6 +18,9 @@
 
 #include "config.h"
 #include "particle.h"
+
+#define PANEL_COUNT 6
+#define PANEL_LEDS  (CUBE_SIZE * CUBE_SIZE)
 
 /* One frame: an RGB colour per LED, in chain order. */
 typedef struct {
@@ -29,3 +34,9 @@ void frame_clear(frame_t *f);
 
 /* Light every LED that shows the voxel. */
 void frame_set(frame_t *f, cell_t cell, color_t color);
+
+/* Light every LED of one panel (0-5, chain order). */
+void frame_fill_panel(frame_t *f, int panel, color_t color);
+
+/* The face a panel sits on, e.g. "Back". */
+const char *panel_name(int panel);

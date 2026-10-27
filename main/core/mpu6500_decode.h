@@ -26,20 +26,16 @@ typedef struct {
  *
  * The board is mounted flat on the top face with its Z axis pointing up,
  * so at rest it reads +1 g on Z, which has to pull towards cube -Z
- * (z == 0). With the Left panel (x == 0) on the floor it reads -1 g on X,
- * so X maps straight through. If tilting moves the fluid the wrong way on
- * an axis, flip that axis' sign here. */
+ * (z == 0). With the Left panel (x == 0) on the floor it reads +1 g on X,
+ * which has to pull towards cube -X, so X is turned round too. If tilting
+ * moves the fluid the wrong way on an axis, flip that axis' sign here;
+ * the gyro follows. */
 typedef struct {
     uint8_t axis;
     int8_t sign;
 } axis_map_t;
 
-static const axis_map_t MPU6500_AXIS_MAP[3] = {{0, 1}, {1, 1}, {2, -1}};
-
-/* The accelerometer measures the push opposite to gravity, which the axis
- * map turns around; the gyro measures the real rotation and needs the
- * opposite signs. */
-#define MPU6500_GYRO_SIGN (-1.0f)
+static const axis_map_t MPU6500_AXIS_MAP[3] = {{0, -1}, {1, 1}, {2, -1}};
 
 /* Decode one FIFO record (or the same 12 bytes read from ACCEL_XOUT_H with
  * the 2 temperature bytes removed). */
