@@ -100,7 +100,6 @@ void app_main(void)
     fluid_populate(&fluid, FLUID_PARTICLES);
     ESP_LOGI(TAG, "%d fluid particles; double-tap the cube to change colour", FLUID_PARTICLES);
     uint32_t hue = FLUID_HUE;
-    color_t color = color_from_hue(hue);
 
     tap_detector_t taps;
     tap_init(&taps, CONFIG_CUBE_TAP_THRESHOLD_MG / 1000.0f);
@@ -132,9 +131,7 @@ void app_main(void)
                 if (tap_feed(&taps, samples[i].accel, sample_ms)) {
                     /* At least 60 degrees from the last hue, so the change shows. */
                     hue = (hue + 60 + esp_random() % 241) % 360;
-                    color = color_from_hue(hue);
-                    ESP_LOGI(TAG, "Double tap: hue %lu, RGB (%u, %u, %u)", (unsigned long)hue,
-                             color.r, color.g, color.b);
+                    ESP_LOGI(TAG, "Double tap: hue %lu", (unsigned long)hue);
                 }
                 sum = v3_add(sum, samples[i].accel);
                 rotation = v3_add(rotation, v3_scale(samples[i].gyro, MPU6500_SAMPLE_MS / 1000.0f));
@@ -154,7 +151,8 @@ void app_main(void)
                 for (uint8_t x = 0; x < CUBE_SIZE; x++) {
                     const cell_t c = {x, y, z};
                     if (fluid_lit(&fluid, c)) {
-                        frame_set(&frame, c, color);
+                        const int tint = (int)lrintf(fluid_tint(&fluid, c));
+                        frame_set(&frame, c, color_from_hue((uint32_t)((int)hue + 360 + tint)));
                     }
                 }
             }
