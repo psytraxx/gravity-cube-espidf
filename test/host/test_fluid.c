@@ -183,6 +183,24 @@ static void test_spin_lags_and_flings_outwards(void)
     TEST_ASSERT_GREATER_THAN_FLOAT(radius_before * 1.05f, radius_after);
 }
 
+/* Tints run diagonally across the fluid, inside the spread, and moving
+ * fluid shifts hue. */
+static void test_tint_varies_across_fluid_and_with_speed(void)
+{
+    const float corner = fluid_tint(&f, (cell_t){0, 0, 0});
+    const float far = fluid_tint(&f, (cell_t){7, 7, 3});
+    TEST_ASSERT_LESS_THAN_FLOAT(far - 30.0f, corner);
+    TEST_ASSERT_GREATER_OR_EQUAL_FLOAT(-FLUID_TINT_SPREAD, corner);
+    TEST_ASSERT_LESS_OR_EQUAL_FLOAT(FLUID_TINT_SPREAD, far);
+
+    const float still = fluid_tint(&f, (cell_t){3, 3, 1});
+    for (int i = 0; i < f.n; i++) {
+        f.p[i].vel = (vec3_t){0.0f, 0.0f, 0.0f};
+    }
+    fluid_step(&f, (vec3_t){3.0f, 0.0f, 0.0f});
+    TEST_ASSERT_GREATER_THAN_FLOAT(still + 5.0f, fluid_tint(&f, (cell_t){3, 3, 1}));
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -192,5 +210,6 @@ int main(void)
     RUN_TEST(test_stays_inside_cube_whichever_way_gravity_points);
     RUN_TEST(test_pressure_solve_removes_divergence);
     RUN_TEST(test_spin_lags_and_flings_outwards);
+    RUN_TEST(test_tint_varies_across_fluid_and_with_speed);
     return UNITY_END();
 }

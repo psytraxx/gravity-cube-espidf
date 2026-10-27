@@ -355,21 +355,28 @@ static void grid_to_particles(fluid_t *f)
     }
 }
 
-/* Particle density at the cell centres, and which voxels it lights. The
- * pressure solve of the next step uses the same density: particles do not
- * move in between. */
+/* Particle density and tint at the cell centres, and which voxels the
+ * density lights. The pressure solve of the next step uses the same
+ * density: particles do not move in between. */
 static void update_density(fluid_t *f)
 {
     memset(f->density, 0, sizeof f->density);
+    memset(f->tint, 0, sizeof f->tint);
     stencil_t s;
     for (int i = 0; i < f->n; i++) {
-        cell_stencil(f->p[i].pos, &s);
+        const particle_t *p = &f->p[i];
+        const float tint = p->tint + FLUID_SPEED_TINT * v3_len(p->vel);
+        cell_stencil(p->pos, &s);
         for (int c = 0; c < 8; c++) {
             f->density[s.idx[c]] += s.w[c];
+            f->tint[s.idx[c]] += s.w[c] * tint;
         }
     }
     for (int i = 0; i < FLUID_CELLS; i++) {
         f->lit[i] = f->density[i] >= (f->lit[i] ? LIGHT_OFF : LIGHT_ON);
+        if (f->density[i] > 0.0f) {
+            f->tint[i] /= f->density[i];
+        }
     }
 }
 
@@ -392,9 +399,14 @@ void fluid_populate(fluid_t *f, int n)
             for (int x = 0; x < N && f->n < n; x++) {
                 for (int k = 0; k < FLUID_PARTICLES_PER_CELL && f->n < n; k++) {
                     const float o = OFFSETS[k % 2];
+                    const vec3_t pos = v3((float)x + o, (float)y + o, (float)z + o);
+                    /* 0 in one bottom corner to 1 at the far top edge of a
+                     * half-full cube. */
+                    const float diagonal = (pos.x + pos.y + pos.z) / (2.5f * N);
                     f->p[f->n++] = (particle_t){
-                        .pos = v3((float)x + o, (float)y + o, (float)z + o),
+                        .pos = pos,
                         .vel = v3(0.0f, 0.0f, 0.0f),
+                        .tint = FLUID_TINT_SPREAD * (2.0f * diagonal - 1.0f),
                     };
                 }
             }
@@ -453,4 +465,9 @@ void fluid_step(fluid_t *f, vec3_t accel)
 bool fluid_lit(const fluid_t *f, cell_t c)
 {
     return f->lit[cell_index(c.x, c.y, c.z)];
+}
+
+float fluid_tint(const fluid_t *f, cell_t c)
+{
+    return f->tint[cell_index(c.x, c.y, c.z)];
 }
