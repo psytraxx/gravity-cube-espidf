@@ -1,5 +1,4 @@
-/* MPU-6500 accelerometer and gyroscope, on I2C or SPI (menuconfig →
- * Gravity cube → IMU bus).
+/* MPU-6500 accelerometer and gyroscope on SPI.
  *
  * Samples at 250 Hz into the chip's FIFO (accel ±4 g, gyro ±1000 °/s,
  * 92 Hz low-pass), so the main loop collects every sample since the last

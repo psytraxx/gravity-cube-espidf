@@ -14,22 +14,14 @@ jobs:
   build:
     name: Host tests and firmware build
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        imu_bus: [i2c, spi]
     steps:
       - uses: actions/checkout@v7
 
       - name: Host tests
-        if: matrix.imu_bus == 'i2c'
         run: |
           cmake -S test/host -B build-host
           cmake --build build-host
           ctest --test-dir build-host --output-on-failure
-
-      - name: Select IMU bus
-        if: matrix.imu_bus == 'spi'
-        run: echo 'CONFIG_CUBE_IMU_SPI=y' >> sdkconfig.defaults
 
       - name: Build firmware
         uses: espressif/esp-idf-ci-action@v1
@@ -39,7 +31,6 @@ jobs:
           command: idf.py build
 
       - name: Upload firmware
-        if: matrix.imu_bus == 'i2c'
         uses: actions/upload-artifact@v7
         with:
           name: gravity-cube

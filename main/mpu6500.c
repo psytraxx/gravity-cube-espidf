@@ -6,13 +6,8 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "sdkconfig.h"
-
-#if CONFIG_CUBE_IMU_SPI
 #include "driver/spi_master.h"
-#else
-#include "driver/i2c_master.h"
-#endif
+#include "sdkconfig.h"
 
 static const char *TAG = "mpu6500";
 
@@ -38,7 +33,7 @@ static const char *TAG = "mpu6500";
 #define PWR_RESET        0x80
 #define PWR_CLK_AUTO     0x01 /* gyro PLL when ready, else internal oscillator */
 #define USER_FIFO_EN     0x40
-#define USER_I2C_IF_DIS  0x10 /* SPI only: keep the I2C interface out of the way */
+#define USER_I2C_IF_DIS  0x10 /* keep the I2C interface off the shared pins */
 #define USER_FIFO_RST    0x04
 #define FIFO_ACCEL_GYRO  0x78 /* gyro X, Y, Z and accel; no temperature */
 #define INT_FIFO_OFLOW   0x10
@@ -59,8 +54,6 @@ static const char *TAG = "mpu6500";
 #define CALIBRATION_SAMPLES 50
 
 static vec3_t s_gyro_bias;
-
-#if CONFIG_CUBE_IMU_SPI
 
 /* All registers are good for 1 MHz; only the sensor registers take 20. */
 #define SPI_HZ 1000000
@@ -109,51 +102,6 @@ static esp_err_t write_reg(uint8_t reg, uint8_t value)
     return spi_device_polling_transmit(s_spi, &t);
 }
 
-#define USER_CTRL_BASE USER_I2C_IF_DIS
-
-#else /* I2C */
-
-#define I2C_TIMEOUT_MS 20
-
-static i2c_master_dev_handle_t s_i2c;
-
-static esp_err_t bus_init(void)
-{
-    const i2c_master_bus_config_t bus = {
-        .i2c_port = -1,
-        .sda_io_num = CONFIG_CUBE_IMU_I2C_SDA,
-        .scl_io_num = CONFIG_CUBE_IMU_I2C_SCL,
-        .clk_source = I2C_CLK_SRC_DEFAULT,
-        .glitch_ignore_cnt = 7,
-        /* Breakout boards carry their own pull-ups; these help short
-         * wires without them. */
-        .flags.enable_internal_pullup = true,
-    };
-    i2c_master_bus_handle_t handle;
-    ESP_RETURN_ON_ERROR(i2c_new_master_bus(&bus, &handle), TAG, "i2c bus");
-    const i2c_device_config_t dev = {
-        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address = CONFIG_CUBE_IMU_I2C_ADDR,
-        .scl_speed_hz = CONFIG_CUBE_IMU_I2C_HZ,
-    };
-    return i2c_master_bus_add_device(handle, &dev, &s_i2c);
-}
-
-static esp_err_t read_regs(uint8_t reg, uint8_t *buf, size_t len)
-{
-    return i2c_master_transmit_receive(s_i2c, &reg, 1, buf, len, I2C_TIMEOUT_MS);
-}
-
-static esp_err_t write_reg(uint8_t reg, uint8_t value)
-{
-    const uint8_t tx[2] = {reg, value};
-    return i2c_master_transmit(s_i2c, tx, sizeof tx, I2C_TIMEOUT_MS);
-}
-
-#define USER_CTRL_BASE 0
-
-#endif
-
 /* One accel and gyro reading straight from the data registers, as a FIFO
  * record (temperature dropped). */
 static esp_err_t read_direct(imu_sample_t *s)
@@ -169,8 +117,8 @@ static esp_err_t read_direct(imu_sample_t *s)
 
 static esp_err_t fifo_reset(void)
 {
-    ESP_RETURN_ON_ERROR(write_reg(REG_USER_CTRL, USER_CTRL_BASE | USER_FIFO_RST), TAG, "fifo");
-    return write_reg(REG_USER_CTRL, USER_CTRL_BASE | USER_FIFO_EN);
+    ESP_RETURN_ON_ERROR(write_reg(REG_USER_CTRL, USER_I2C_IF_DIS | USER_FIFO_RST), TAG, "fifo");
+    return write_reg(REG_USER_CTRL, USER_I2C_IF_DIS | USER_FIFO_EN);
 }
 
 esp_err_t mpu6500_init(void)
@@ -179,7 +127,7 @@ esp_err_t mpu6500_init(void)
 
     ESP_RETURN_ON_ERROR(write_reg(REG_PWR_MGMT_1, PWR_RESET), TAG, "no answer");
     vTaskDelay(pdMS_TO_TICKS(100));
-    ESP_RETURN_ON_ERROR(write_reg(REG_USER_CTRL, USER_CTRL_BASE), TAG, "user ctrl");
+    ESP_RETURN_ON_ERROR(write_reg(REG_USER_CTRL, USER_I2C_IF_DIS), TAG, "user ctrl");
     ESP_RETURN_ON_ERROR(write_reg(REG_SIGNAL_RESET, 0x07), TAG, "signal reset");
     vTaskDelay(pdMS_TO_TICKS(100));
 

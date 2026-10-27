@@ -22,12 +22,6 @@
 
 static const char *TAG = "cube";
 
-#if CONFIG_CUBE_IMU_SPI
-#define IMU_BUS "SPI"
-#else
-#define IMU_BUS "I2C"
-#endif
-
 /* Track gravity with the gyro and triple anything else, so shaking the
  * cube sloshes the fluid. */
 #define MOTION_SMOOTHING 0.05f
@@ -63,8 +57,7 @@ static void led_task(void *arg)
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "Gravity cube, %dx%dx%d, MPU-6500 on %s", CUBE_SIZE, CUBE_SIZE, CUBE_SIZE,
-             IMU_BUS);
+    ESP_LOGI(TAG, "Gravity cube, %dx%dx%d", CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
 
     s_frames = xQueueCreate(1, sizeof(frame_t));
     xTaskCreatePinnedToCore(led_task, "leds", 4096, NULL, 5, NULL, 1);

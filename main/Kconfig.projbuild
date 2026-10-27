@@ -28,43 +28,6 @@ config CUBE_TAP_THRESHOLD_MG
         as a tap. Raise it if sloshing the fluid switches effects, lower it
         if double taps are missed.
 
-choice CUBE_IMU_BUS
-    prompt "IMU bus"
-    default CUBE_IMU_I2C
-    help
-        How the MPU-6500 is connected.
-
-    config CUBE_IMU_I2C
-        bool "I2C"
-    config CUBE_IMU_SPI
-        bool "SPI"
-endchoice
-
-if CUBE_IMU_I2C
-
-config CUBE_IMU_I2C_SDA
-    int "I2C SDA GPIO"
-    default 21
-
-config CUBE_IMU_I2C_SCL
-    int "I2C SCL GPIO"
-    default 22
-
-config CUBE_IMU_I2C_ADDR
-    hex "I2C address"
-    default 0x68
-    help
-        0x68 with AD0 low (the breakout boards' default), 0x69 with AD0
-        high.
-
-config CUBE_IMU_I2C_HZ
-    int "I2C clock (Hz)"
-    default 400000
-
-endif
-
-if CUBE_IMU_SPI
-
 config CUBE_IMU_SPI_MOSI
     int "SPI MOSI GPIO (board SDA/SDI)"
     default 23
@@ -80,7 +43,5 @@ config CUBE_IMU_SPI_SCLK
 config CUBE_IMU_SPI_CS
     int "SPI CS GPIO (board NCS)"
     default 5
-
-endif
 
 endmenu

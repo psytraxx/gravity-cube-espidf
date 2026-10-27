@@ -14,7 +14,7 @@ solver in [gravity-cube-rs](https://github.com/psytraxx/gravity-cube-rs).
 | Part | Notes |
 |---|---|
 | ESP32 dev board | Any plain ESP32 (dual core, 4 MB flash) |
-| MPU-6500 breakout | 3–5 V supply (on-board LDO), I2C or SPI |
+| MPU-6500 breakout | 3–5 V supply (on-board LDO), wired for SPI |
 | 6 × 8x8 WS2812B panels | 384 LEDs in one chain |
 | 74AHCT125 | 3.3 V to 5 V level shifter for the LED data line |
 | 330 Ω resistor | In series with the data line, at the first panel |
@@ -44,29 +44,20 @@ flowchart LR
 The per-panel rotation and mirroring is in
 [`main/core/panel.c`](main/core/panel.c).
 
-### MPU-6500 over I2C (default)
+### MPU-6500 (SPI)
 
 | MPU-6500 board | ESP32 |
 |---|---|
 | VCC | 3V3 (or 5 V) |
 | GND | GND |
-| SCL | GPIO 22 |
-| SDA | GPIO 21 |
-| AD0 | GND (address 0x68) |
-| NCS | 3V3 (keeps the chip in I2C mode) |
-
-### MPU-6500 over SPI
-
-Select *SPI* under `idf.py menuconfig` → *Gravity cube* → *IMU bus*.
-
-| MPU-6500 board | ESP32 |
-|---|---|
 | SCL (SCLK) | GPIO 18 |
 | SDA (SDI / MOSI) | GPIO 23 |
 | AD0 (SDO / MISO) | GPIO 19 |
 | NCS | GPIO 5 |
 
-All pins, the I2C address and clock are settable in menuconfig.
+SPI runs at 1 MHz, against 400 kHz for the board's I2C interface, so a
+frame's FIFO read takes a fraction of the time. The pins are settable in
+menuconfig.
 
 ### Mounting
 
@@ -100,7 +91,7 @@ rotation rate, and the physics, frame and LED send times.
 | LED data GPIO | 2 | |
 | Physics step period | 12 ms | The physics constants are per step; 12 ms is the LED chain's refresh time |
 | Tap threshold | 1000 mg | Raise it if sloshing switches effects, lower it if taps are missed |
-| IMU bus | I2C | I2C or SPI, with pins |
+| IMU SPI pins | 23, 19, 18, 5 | MOSI, MISO, SCLK, CS |
 
 Particle counts and colours are in [`main/core/config.h`](main/core/config.h).
 
@@ -155,7 +146,7 @@ by tilt, and are swept round when the cube spins.
 | Path | |
 |---|---|
 | `main/main.c` | Main loop on core 0, LED task on core 1 |
-| `main/mpu6500.c` | MPU-6500 over I2C or SPI: setup, gyro calibration, FIFO reads |
+| `main/mpu6500.c` | MPU-6500 over SPI: setup, gyro calibration, FIFO reads |
 | `main/ws2812.c` | WS2812 chain on one RMT channel |
 | `main/core/` | Everything that needs no hardware: effects, motion filter, tap detector, panel map, IMU sample decoding |
 | `test/host/` | Unity tests for `main/core`, run on the host |
@@ -169,4 +160,4 @@ cmake -S test/host -B build-host && cmake --build build-host
 ctest --test-dir build-host --output-on-failure
 ```
 
-CI runs them and builds the firmware for both IMU buses on every push.
+CI runs them and builds the firmware on every push.
