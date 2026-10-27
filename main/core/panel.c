@@ -86,7 +86,7 @@ int panel_leds(cell_t c, uint16_t leds[3])
 
 void frame_clear(frame_t *f)
 {
-    memset(f->grb, 0, sizeof f->grb);
+    memset(f->rgb, 0, sizeof f->rgb);
 }
 
 void frame_set(frame_t *f, cell_t cell, color_t color)
@@ -94,9 +94,9 @@ void frame_set(frame_t *f, cell_t cell, color_t color)
     uint16_t leds[3];
     const int n = panel_leds(cell, leds);
     for (int i = 0; i < n; i++) {
-        uint8_t *px = &f->grb[leds[i] * 3];
-        px[0] = color.g;
-        px[1] = color.r;
+        uint8_t *px = &f->rgb[leds[i] * 3];
+        px[0] = color.r;
+        px[1] = color.g;
         px[2] = color.b;
     }
 }

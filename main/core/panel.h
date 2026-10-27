@@ -17,9 +17,9 @@
 #include "config.h"
 #include "particle.h"
 
-/* One frame in chain order, GRB bytes as the WS2812 takes them. */
+/* One frame: an RGB colour per LED, in chain order. */
 typedef struct {
-    uint8_t grb[LED_COUNT * 3];
+    uint8_t rgb[LED_COUNT * 3];
 } frame_t;
 
 /* LEDs showing a voxel, at most three (a corner). Returns how many. */

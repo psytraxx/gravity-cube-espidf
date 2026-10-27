@@ -1,4 +1,5 @@
-/* The cube's WS2812 chain on one RMT channel. */
+/* The cube's WS2812 chain, through Espressif's led_strip component on
+ * one RMT channel. */
 #pragma once
 
 #include "esp_err.h"

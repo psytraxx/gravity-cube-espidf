@@ -105,12 +105,13 @@ flowchart LR
     MF -->|gravity + amplified motion| FX[effect step<br/>fluid or boids]
     IMU -->|gyro, integrated| FX
     FX --> FB[frame builder]
-    FB -->|queue| LED[LED task<br/>core 1, RMT]
+    FB -->|queue| LED[LED task<br/>core 1, led_strip]
 ```
 
 **Core 0** reads every IMU sample since the last frame, runs one physics
-step and builds the frame. **Core 1** sends frames to the LEDs over RMT
-(~11.5 ms for 384 LEDs); the two overlap, and core 0 only waits if core 1
+step and builds the frame. **Core 1** sends frames to the LEDs with
+Espressif's [led_strip](https://components.espressif.com/components/espressif/led_strip)
+component over RMT (~11.5 ms for 384 LEDs); the two overlap, and core 0 only waits if core 1
 is still sending. Unchanged frames are not re-sent, so a settled cube
 keeps the data line quiet.
 
@@ -147,7 +148,7 @@ by tilt, and are swept round when the cube spins.
 |---|---|
 | `main/main.c` | Main loop on core 0, LED task on core 1 |
 | `main/mpu6500.c` | MPU-6500 over SPI: setup, gyro calibration, FIFO reads |
-| `main/ws2812.c` | WS2812 chain on one RMT channel |
+| `main/ws2812.c` | WS2812 chain through the `espressif/led_strip` component (RMT) |
 | `main/core/` | Everything that needs no hardware: effects, motion filter, tap detector, panel map, IMU sample decoding |
 | `test/host/` | Unity tests for `main/core`, run on the host |
 

@@ -3,7 +3,7 @@ idf_component_register(
          "core/boids.c" "core/effect.c" "core/fluid.c" "core/motion.c"
          "core/mpu6500_decode.c" "core/panel.c" "core/tap.c"
     INCLUDE_DIRS "." "core"
-    REQUIRES esp_driver_spi esp_driver_rmt esp_timer esp_rom log freertos
+    REQUIRES esp_driver_spi esp_timer log freertos
 )
 # The physics dominates frame time; optimise the core for speed.
 set_source_files_properties(

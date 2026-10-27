@@ -62,17 +62,17 @@ static void test_inner_voxel_lights_nothing(void)
     TEST_ASSERT_EQUAL_INT(3, panel_leds((cell_t){7, 7, 7}, leds));
 }
 
-static void test_frame_is_grb(void)
+static void test_frame_set_lights_every_face(void)
 {
     frame_t f;
     frame_clear(&f);
     frame_set(&f, (cell_t){0, 0, 7}, (color_t){1, 2, 3});
     /* LED 64 (Front IN) and 7 (Left). */
-    TEST_ASSERT_EQUAL_UINT8(2, f.grb[64 * 3]);
-    TEST_ASSERT_EQUAL_UINT8(1, f.grb[64 * 3 + 1]);
-    TEST_ASSERT_EQUAL_UINT8(3, f.grb[64 * 3 + 2]);
-    TEST_ASSERT_EQUAL_UINT8(2, f.grb[7 * 3]);
-    TEST_ASSERT_EQUAL_UINT8(0, f.grb[0]);
+    TEST_ASSERT_EQUAL_UINT8(1, f.rgb[64 * 3]);
+    TEST_ASSERT_EQUAL_UINT8(2, f.rgb[64 * 3 + 1]);
+    TEST_ASSERT_EQUAL_UINT8(3, f.rgb[64 * 3 + 2]);
+    TEST_ASSERT_EQUAL_UINT8(1, f.rgb[7 * 3]);
+    TEST_ASSERT_EQUAL_UINT8(0, f.rgb[0]);
 }
 
 /* At rest, board flat with Z up: +1 g on sensor Z pulls towards cube -Z. */
@@ -95,7 +95,7 @@ int main(void)
     RUN_TEST(test_every_led_is_hit_exactly_once);
     RUN_TEST(test_chain_corners_match_wiring);
     RUN_TEST(test_inner_voxel_lights_nothing);
-    RUN_TEST(test_frame_is_grb);
+    RUN_TEST(test_frame_set_lights_every_face);
     RUN_TEST(test_decode_rest_and_spin);
     return UNITY_END();
 }
