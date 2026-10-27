@@ -96,7 +96,7 @@ rotation rate, and the physics, frame and LED send times.
 |---|---|---|
 | LED data GPIO | 2 | |
 | Panel test at power on | on | Each panel green for 2 s, in chain order |
-| Physics step period | 12 ms | The physics constants are per step; 12 ms is the LED chain's refresh time |
+| Physics step period | 18 ms | The physics constants are per step; a fluid step takes ~17 ms, so 18 ms (55 fps) is the shortest it keeps up with |
 | Tap threshold | 1000 mg | Raise it if sloshing changes the colour, lower it if taps are missed |
 | IMU SPI pins | 11, 13, 12, 10 | MOSI, MISO, SCLK, CS |
 | I2C scan at startup | off | Wiring check: probes the IMU pins as I2C; finds the MPU-6500 at 0x68/0x69 after a power on |
@@ -141,13 +141,17 @@ from the current one. Shaking never has the stillness, so it does not
 change the colour. Every hue's channels add up to 60/255, so the cube
 draws the same current in any colour.
 
-**Fluid.** Particles have continuous positions. Each step integrates
-velocity, moves every particle, then pushes overlapping particles apart in
-four solver passes on a spatial grid. Velocity is then the distance
-actually moved, so a pile blocked by the walls comes to rest. A
-particle's LED only moves once the particle is more than 0.65 cells from
-its cell's centre, so a settled pile does not flicker. Spinning the cube
-makes the fluid lag against the spin and flings it outwards.
+**Fluid.** An incompressible FLIP fluid: inviscid Navier-Stokes on a
+staggered grid with one cell per voxel, carried by 512 particles (two per
+voxel of a half-full cube). Each step the particles take gravity and the
+forces of the turning cube (Euler, Coriolis, centrifugal), hand their
+velocity to the grid, and a Gauss-Seidel pressure solve makes the flow
+divergence-free against the walls. The particles take back the change
+(80 % FLIP, 20 % PIC to damp noise), move, and are pushed apart so they
+stay evenly spread; cells packed above two particles get a little
+outflow, so the fluid keeps its volume. A voxel lights once the particle
+density at its centre reaches 1.2 and goes dark below 0.4, so a settled
+surface does not flicker. A step takes ~17 ms on the ESP32-S3.
 
 ## Code layout
 

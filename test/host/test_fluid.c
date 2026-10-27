@@ -1,203 +1,196 @@
+#include <math.h>
 #include <stdbool.h>
 #include <string.h>
 
 #include "fluid.h"
 #include "unity.h"
 
+#define N CUBE_SIZE
+
 static fluid_t f;
 
 void setUp(void)
 {
     fluid_init(&f);
+    fluid_populate(&f, FLUID_PARTICLES);
 }
 
 void tearDown(void) {}
 
 static const vec3_t NO_GRAVITY = {0.0f, 0.0f, 0.0f};
-static const vec3_t DOWN = {0.0f, 1.0f, 0.0f};
+static const vec3_t DOWN = {0.0f, 0.0f, -1.0f};
 
-static void assert_in_cube(vec3_t p)
+/* Half the cube's voxels. */
+#define HALF_FULL (N * N * N / 2)
+
+static void run(int steps, vec3_t accel)
 {
-    TEST_ASSERT_TRUE(p.x >= 0.0f && p.x <= CUBE_BOUND);
-    TEST_ASSERT_TRUE(p.y >= 0.0f && p.y <= CUBE_BOUND);
-    TEST_ASSERT_TRUE(p.z >= 0.0f && p.z <= CUBE_BOUND);
+    for (int i = 0; i < steps; i++) {
+        fluid_step(&f, accel);
+    }
+}
+
+static int lit_count(void)
+{
+    int n = 0;
+    for (uint8_t z = 0; z < N; z++) {
+        for (uint8_t y = 0; y < N; y++) {
+            for (uint8_t x = 0; x < N; x++) {
+                n += fluid_lit(&f, (cell_t){x, y, z});
+            }
+        }
+    }
+    return n;
+}
+
+static vec3_t mean_position(void)
+{
+    vec3_t sum = {0.0f, 0.0f, 0.0f};
+    for (int i = 0; i < f.n; i++) {
+        sum = v3_add(sum, f.p[i].pos);
+    }
+    return v3_scale(sum, 1.0f / (float)f.n);
 }
 
 static void test_populate_fills_bottom_half(void)
 {
-    fluid_populate(&f, FLUID_PARTICLES);
-    TEST_ASSERT_EQUAL_INT(256, f.n);
-    for (int i = 0; i < f.n; i++) {
-        TEST_ASSERT_TRUE(f.p[i].pos.y >= 4.0f && f.p[i].pos.y < 8.0f);
-    }
-    fluid_populate(&f, 4);
-    TEST_ASSERT_EQUAL_INT(4, f.n);
+    TEST_ASSERT_EQUAL_INT(FLUID_PARTICLES, f.n);
+    TEST_ASSERT_EQUAL_INT(HALF_FULL, lit_count());
+    TEST_ASSERT_TRUE(fluid_lit(&f, (cell_t){0, 0, 0}));
+    TEST_ASSERT_TRUE(fluid_lit(&f, (cell_t){7, 7, 3}));
+    TEST_ASSERT_FALSE(fluid_lit(&f, (cell_t){0, 0, 4}));
+    TEST_ASSERT_FALSE(fluid_lit(&f, (cell_t){7, 7, 7}));
 }
 
-static void test_gravity_moves_particle_down(void)
+/* At rest the fluid stays in the bottom half, keeps its volume, and the
+ * lit voxels hold still. */
+static void test_settles_keeping_volume_without_flicker(void)
 {
-    fluid_add(&f, particle_at(3.5f, 3.5f, 3.5f));
-    for (int i = 0; i < 10; i++) {
+    run(300, DOWN);
+    const int lit = lit_count();
+    TEST_ASSERT_INT_WITHIN(HALF_FULL / 10, HALF_FULL, lit);
+    TEST_ASSERT_FLOAT_WITHIN(0.3f, N / 4.0f, mean_position().z);
+
+    bool before[FLUID_CELLS];
+    memcpy(before, f.lit, sizeof before);
+    int changes = 0;
+    for (int i = 0; i < 100; i++) {
         fluid_step(&f, DOWN);
+        for (int c = 0; c < FLUID_CELLS; c++) {
+            changes += f.lit[c] != before[c];
+        }
+        memcpy(before, f.lit, sizeof before);
     }
-    TEST_ASSERT_TRUE(f.p[0].pos.y > 3.5f);
+    /* Fewer than one voxel change in five steps. */
+    TEST_ASSERT_LESS_THAN_INT(20, changes);
+}
+
+/* Gravity along +x: the fluid flows to the x == 7 side and keeps its
+ * volume there. */
+static void test_tilt_flows_downhill(void)
+{
+    run(200, (vec3_t){1.0f, 0.0f, 0.0f});
+    TEST_ASSERT_FLOAT_WITHIN(0.4f, N * 0.75f, mean_position().x);
+    TEST_ASSERT_TRUE(fluid_lit(&f, (cell_t){7, 0, 7}));
+    TEST_ASSERT_FALSE(fluid_lit(&f, (cell_t){0, 0, 0}));
+    TEST_ASSERT_INT_WITHIN(HALF_FULL / 10, HALF_FULL, lit_count());
 }
 
 static void test_stays_inside_cube_whichever_way_gravity_points(void)
 {
-    const vec3_t dirs[] = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
-    fluid_add(&f, particle_at(3.5f, 3.5f, 3.5f));
+    const vec3_t dirs[] = {
+        {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},       {0, -1, 0},
+        {0, 0, 1}, {0, 0, -1}, {0.6f, -0.6f, 0.5f}, {-3, 2, 1},
+    };
     for (size_t d = 0; d < sizeof dirs / sizeof dirs[0]; d++) {
-        f.p[0] = particle_at(3.5f, 3.5f, 3.5f);
-        for (int i = 0; i < 100; i++) {
-            fluid_step(&f, dirs[d]);
+        run(40, dirs[d]);
+        for (int i = 0; i < f.n; i++) {
+            const vec3_t p = f.p[i].pos;
+            TEST_ASSERT_TRUE(p.x >= 0.0f && p.x <= N);
+            TEST_ASSERT_TRUE(p.y >= 0.0f && p.y <= N);
+            TEST_ASSERT_TRUE(p.z >= 0.0f && p.z <= N);
         }
-        assert_in_cube(f.p[0].pos);
     }
 }
 
-static void test_velocity_is_clamped(void)
+/* After a step, flow into and out of every cell that held fluid when the
+ * step started balances. */
+static void test_pressure_solve_removes_divergence(void)
 {
-    particle_t p = particle_at(3.5f, 3.5f, 3.5f);
-    p.vel = v3(10.0f, 10.0f, 10.0f);
-    fluid_add(&f, p);
-    fluid_step(&f, NO_GRAVITY);
-    TEST_ASSERT_TRUE(fabsf(f.p[0].vel.x) <= FLUID_MAX_VELOCITY);
-    TEST_ASSERT_TRUE(fabsf(f.p[0].vel.y) <= FLUID_MAX_VELOCITY);
-    TEST_ASSERT_TRUE(fabsf(f.p[0].vel.z) <= FLUID_MAX_VELOCITY);
-}
-
-static void test_overlapping_particles_separate(void)
-{
-    fluid_add(&f, particle_at(3.5f, 3.5f, 3.5f));
-    fluid_add(&f, particle_at(3.6f, 3.5f, 3.5f));
-    for (int i = 0; i < 50; i++) {
-        fluid_step(&f, NO_GRAVITY);
-    }
-    TEST_ASSERT_TRUE(f.p[1].pos.x - f.p[0].pos.x > 0.1f);
-}
-
-static void test_velocity_decays_without_gravity(void)
-{
-    particle_t p = particle_at(3.5f, 3.5f, 3.5f);
-    p.vel = v3(0.5f, 0.5f, 0.5f);
-    fluid_add(&f, p);
-    const float start = particle_speed(&f.p[0]);
-    for (int i = 0; i < 20; i++) {
-        fluid_step(&f, NO_GRAVITY);
-    }
-    TEST_ASSERT_TRUE(particle_speed(&f.p[0]) < start);
-}
-
-static void test_particle_on_floor_comes_to_rest(void)
-{
-    fluid_add(&f, particle_at(3.0f, 3.0f, 3.0f));
-    for (int i = 0; i < 200; i++) {
-        fluid_step(&f, DOWN);
-    }
-    TEST_ASSERT_EQUAL_UINT8(7, particle_cell(&f.p[0]).y);
-    TEST_ASSERT_TRUE(particle_speed(&f.p[0]) < 0.01f);
-}
-
-static void occupied(bool cells[512])
-{
-    memset(cells, 0, 512);
+    const vec3_t tilted = {0.7f, 0.0f, -0.7f};
+    run(20, tilted);
+    /* The solve sees the cells and density as they are before it moves the
+     * particles. */
+    bool fluid[FLUID_CELLS] = {false};
     for (int i = 0; i < f.n; i++) {
-        const cell_t c = fluid_cell(&f, i);
-        cells[c.x + c.y * 8 + c.z * 64] = true;
+        const vec3_t p = f.p[i].pos;
+        fluid[(int)p.x + N * ((int)p.y + N * (int)p.z)] = true;
     }
-}
+    float density[FLUID_CELLS];
+    memcpy(density, f.density, sizeof density);
+    fluid_step(&f, tilted);
 
-/* Tilted gravity so the pile has to flow before it settles; once settled,
- * no LED may change. */
-static void test_full_cube_settles_without_flicker(void)
-{
-    const vec3_t tilted = {0.3f, 1.0f, 0.2f};
-    fluid_populate(&f, FLUID_PARTICLES);
-    for (int i = 0; i < 600; i++) {
-        fluid_step(&f, tilted);
-    }
-    bool prev[512], cur[512];
-    occupied(prev);
-    int changed = 0;
-    for (int i = 0; i < 100; i++) {
-        fluid_step(&f, tilted);
-        occupied(cur);
-        for (int c = 0; c < 512; c++) {
-            changed += prev[c] != cur[c];
+    float worst = 0.0f;
+    for (int k = 0; k < N; k++) {
+        for (int j = 0; j < N; j++) {
+            for (int i = 0; i < N; i++) {
+                const int cell = i + N * (j + N * k);
+                /* Cells packed above rest density get outflow on purpose. */
+                if (!fluid[cell] || density[cell] > FLUID_PARTICLES_PER_CELL) {
+                    continue;
+                }
+                const float div = f.vel[0][(i + 1) + (N + 1) * (j + N * k)] -
+                                  f.vel[0][i + (N + 1) * (j + N * k)] +
+                                  f.vel[1][i + N * ((j + 1) + (N + 1) * k)] -
+                                  f.vel[1][i + N * (j + (N + 1) * k)] +
+                                  f.vel[2][i + N * (j + N * (k + 1))] - f.vel[2][i + N * (j + N * k)];
+                worst = fmaxf(worst, fabsf(div));
+            }
         }
-        memcpy(prev, cur, sizeof prev);
     }
-    TEST_ASSERT_EQUAL_INT(0, changed);
+    TEST_ASSERT_LESS_THAN_FLOAT(0.05f, worst);
 }
 
+/* The cube starts spinning about z: the fluid lags behind (on the +x side
+ * it moves towards -y, on the +y side towards +x), then is flung out. */
 static void test_spin_lags_and_flings_outwards(void)
 {
-    /* One particle on the +X side of the centre (3.5), no gravity. Spin
-     * about +Z: a point on +X moves towards +Y with the cube. */
-    fluid_add(&f, particle_at(5.0f, 3.5f, 3.5f));
-    fluid_set_rotation(&f, v3(0.0f, 0.0f, 0.05f));
-    fluid_step(&f, NO_GRAVITY);
-    TEST_ASSERT_TRUE(f.p[0].pos.y < 3.5f);
-    TEST_ASSERT_TRUE(f.p[0].pos.x > 5.0f);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.5f, f.p[0].pos.z);
-}
-
-static void test_particle_on_spin_axis_stays_put(void)
-{
-    fluid_add(&f, particle_at(3.5f, 3.5f, 1.0f));
-    fluid_set_rotation(&f, v3(0.0f, 0.0f, 0.05f));
-    for (int i = 0; i < 10; i++) {
-        fluid_step(&f, NO_GRAVITY);
+    float radius_before = 0.0f;
+    for (int i = 0; i < f.n; i++) {
+        radius_before += hypotf(f.p[i].pos.x - N / 2.0f, f.p[i].pos.y - N / 2.0f);
     }
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.5f, f.p[0].pos.x);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.5f, f.p[0].pos.y);
-}
 
-static void test_cell_rounds_and_clamps(void)
-{
-    const particle_t a = particle_at(2.7f, 5.3f, 7.9f);
-    const cell_t ca = particle_cell(&a);
-    TEST_ASSERT_EQUAL_UINT8(3, ca.x);
-    TEST_ASSERT_EQUAL_UINT8(5, ca.y);
-    TEST_ASSERT_EQUAL_UINT8(7, ca.z);
-    const particle_t b = particle_at(-1.0f, 10.0f, 3.2f);
-    const cell_t cb = particle_cell(&b);
-    TEST_ASSERT_EQUAL_UINT8(0, cb.x);
-    TEST_ASSERT_EQUAL_UINT8(7, cb.y);
-    TEST_ASSERT_EQUAL_UINT8(3, cb.z);
-}
+    fluid_set_rotation(&f, (vec3_t){0.0f, 0.0f, 0.15f});
+    fluid_step(&f, NO_GRAVITY);
+    float vy_east = 0.0f, vx_north = 0.0f;
+    for (int i = 0; i < f.n; i++) {
+        const vec3_t p = f.p[i].pos;
+        if (p.x > 6.0f && p.y > 2.0f && p.y < 6.0f) {
+            vy_east += f.p[i].vel.y;
+        }
+        if (p.y > 6.0f && p.x > 2.0f && p.x < 6.0f) {
+            vx_north += f.p[i].vel.x;
+        }
+    }
+    TEST_ASSERT_LESS_THAN_FLOAT(0.0f, vy_east);
+    TEST_ASSERT_GREATER_THAN_FLOAT(0.0f, vx_north);
 
-/* The displayed cell only moves once the particle is clearly past the
- * boundary. */
-static void test_display_hysteresis(void)
-{
-    fluid_add(&f, particle_at(3.0f, 3.0f, 3.0f));
-    fluid_step(&f, NO_GRAVITY);
-    f.p[0].pos.x = 3.6f; /* nearest cell is 4, but within hysteresis of 3 */
-    f.p[0].vel = v3(0.0f, 0.0f, 0.0f);
-    fluid_step(&f, NO_GRAVITY);
-    TEST_ASSERT_EQUAL_UINT8(3, fluid_cell(&f, 0).x);
-    f.p[0].pos.x = 3.7f;
-    f.p[0].vel = v3(0.0f, 0.0f, 0.0f);
-    fluid_step(&f, NO_GRAVITY);
-    TEST_ASSERT_EQUAL_UINT8(4, fluid_cell(&f, 0).x);
+    run(200, NO_GRAVITY);
+    float radius_after = 0.0f;
+    for (int i = 0; i < f.n; i++) {
+        radius_after += hypotf(f.p[i].pos.x - N / 2.0f, f.p[i].pos.y - N / 2.0f);
+    }
+    TEST_ASSERT_GREATER_THAN_FLOAT(radius_before * 1.05f, radius_after);
 }
 
 int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_populate_fills_bottom_half);
-    RUN_TEST(test_gravity_moves_particle_down);
+    RUN_TEST(test_settles_keeping_volume_without_flicker);
+    RUN_TEST(test_tilt_flows_downhill);
     RUN_TEST(test_stays_inside_cube_whichever_way_gravity_points);
-    RUN_TEST(test_velocity_is_clamped);
-    RUN_TEST(test_overlapping_particles_separate);
-    RUN_TEST(test_velocity_decays_without_gravity);
-    RUN_TEST(test_particle_on_floor_comes_to_rest);
-    RUN_TEST(test_full_cube_settles_without_flicker);
+    RUN_TEST(test_pressure_solve_removes_divergence);
     RUN_TEST(test_spin_lags_and_flings_outwards);
-    RUN_TEST(test_particle_on_spin_axis_stays_put);
-    RUN_TEST(test_cell_rounds_and_clamps);
-    RUN_TEST(test_display_hysteresis);
     return UNITY_END();
 }
