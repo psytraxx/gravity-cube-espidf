@@ -105,14 +105,35 @@ void frame_set(frame_t *f, cell_t cell, color_t color)
     }
 }
 
-void frame_fill_panel(frame_t *f, int panel, color_t color)
+void frame_set_panel_led(frame_t *f, int panel, uint8_t col, uint8_t row, color_t color)
 {
-    for (int i = panel * PANEL_LEDS; i < (panel + 1) * PANEL_LEDS; i++) {
-        uint8_t *px = &f->rgb[i * 3];
-        px[0] = color.r;
-        px[1] = color.g;
-        px[2] = color.b;
+    /* In chain order; each panel's first face coordinate runs left to
+     * right, the second bottom to top. */
+    uint16_t led;
+    switch (panel) {
+    case 0: /* Left, seen from -x */
+        led = led_index(FACE_EAST, LAST - col, row);
+        break;
+    case 1: /* Back, seen from -y */
+        led = led_index(FACE_SOUTH, col, row);
+        break;
+    case 2: /* Right, seen from +x */
+        led = led_index(FACE_WEST, col, row);
+        break;
+    case 3: /* Front, seen from +y */
+        led = led_index(FACE_NORTH, LAST - col, row);
+        break;
+    case 4: /* Bottom, Front edge at the top */
+        led = led_index(FACE_DOWN, LAST - col, row);
+        break;
+    default: /* Top, Front edge at the bottom */
+        led = led_index(FACE_UP, LAST - col, LAST - row);
+        break;
     }
+    uint8_t *px = &f->rgb[led * 3];
+    px[0] = color.r;
+    px[1] = color.g;
+    px[2] = color.b;
 }
 
 const char *panel_name(int panel)

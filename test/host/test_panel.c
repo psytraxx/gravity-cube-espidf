@@ -97,16 +97,61 @@ static void test_decode_rest_and_spin(void)
     TEST_ASSERT_FLOAT_WITHIN(1e-5f, 1.0f, mpu6500_decode(neg).accel.x);
 }
 
-static void test_fill_panel_lights_only_that_panel(void)
+/* The one LED frame_set_panel_led lights. */
+static uint16_t panel_led(int panel, uint8_t col, uint8_t row)
 {
     static frame_t f;
     frame_clear(&f);
-    frame_fill_panel(&f, 2, (color_t){0, 60, 0});
+    frame_set_panel_led(&f, panel, col, row, (color_t){0, 60, 0});
+    int lit = -1;
     for (int i = 0; i < LED_COUNT; i++) {
-        const bool on = i >= 2 * PANEL_LEDS && i < 3 * PANEL_LEDS;
-        TEST_ASSERT_EQUAL_UINT8(0, f.rgb[i * 3]);
-        TEST_ASSERT_EQUAL_UINT8(on ? 60 : 0, f.rgb[i * 3 + 1]);
-        TEST_ASSERT_EQUAL_UINT8(0, f.rgb[i * 3 + 2]);
+        if (f.rgb[i * 3 + 1] != 0) {
+            TEST_ASSERT_EQUAL_INT(-1, lit);
+            lit = i;
+        }
+    }
+    TEST_ASSERT_NOT_EQUAL_INT(-1, lit);
+    return (uint16_t)lit;
+}
+
+static void test_panel_led_covers_its_panel(void)
+{
+    for (int p = 0; p < PANEL_COUNT; p++) {
+        uint8_t hits[PANEL_LEDS] = {0};
+        for (uint8_t row = 0; row < 8; row++) {
+            for (uint8_t col = 0; col < 8; col++) {
+                const uint16_t led = panel_led(p, col, row);
+                TEST_ASSERT_TRUE(led >= p * PANEL_LEDS && led < (p + 1) * PANEL_LEDS);
+                hits[led - p * PANEL_LEDS]++;
+            }
+        }
+        for (int i = 0; i < PANEL_LEDS; i++) {
+            TEST_ASSERT_EQUAL_UINT8(1, hits[i]);
+        }
+    }
+}
+
+static void test_panel_led_is_seen_from_outside(void)
+{
+    /* Bottom left of each side is at the bottom of the edge it shares with
+     * the previous side, round Left, Back, Right, Front. */
+    TEST_ASSERT_TRUE(lights(0, 7, 0, panel_led(0, 0, 0)));
+    TEST_ASSERT_TRUE(lights(0, 0, 0, panel_led(1, 0, 0)));
+    TEST_ASSERT_TRUE(lights(7, 0, 0, panel_led(2, 0, 0)));
+    TEST_ASSERT_TRUE(lights(7, 7, 0, panel_led(3, 0, 0)));
+    for (uint8_t i = 0; i < 8; i++) {
+        /* Each side's right column meets the next side's left column. */
+        TEST_ASSERT_TRUE(lights(0, 0, i, panel_led(0, 7, i)));
+        TEST_ASSERT_TRUE(lights(7, 0, i, panel_led(1, 7, i)));
+        TEST_ASSERT_TRUE(lights(7, 7, i, panel_led(2, 7, i)));
+        TEST_ASSERT_TRUE(lights(0, 7, i, panel_led(3, 7, i)));
+        /* Unfolded cross: Front's top row meets Top's bottom row, Front's
+         * bottom row meets Bottom's top row, column for column. */
+        const uint8_t x = (uint8_t)(7 - i);
+        TEST_ASSERT_TRUE(lights(x, 7, 7, panel_led(3, i, 7)));
+        TEST_ASSERT_TRUE(lights(x, 7, 7, panel_led(5, i, 0)));
+        TEST_ASSERT_TRUE(lights(x, 7, 0, panel_led(3, i, 0)));
+        TEST_ASSERT_TRUE(lights(x, 7, 0, panel_led(4, i, 7)));
     }
 }
 
@@ -117,7 +162,8 @@ int main(void)
     RUN_TEST(test_chain_corners_match_wiring);
     RUN_TEST(test_inner_voxel_lights_nothing);
     RUN_TEST(test_frame_set_lights_every_face);
-    RUN_TEST(test_fill_panel_lights_only_that_panel);
+    RUN_TEST(test_panel_led_covers_its_panel);
+    RUN_TEST(test_panel_led_is_seen_from_outside);
     RUN_TEST(test_decode_rest_and_spin);
     return UNITY_END();
 }
