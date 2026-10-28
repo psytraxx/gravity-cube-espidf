@@ -63,4 +63,35 @@ config CUBE_IMU_I2C_SCAN
         until it is power cycled, so the scan only finds it after a power
         on, not after a reset.
 
+menu "Wi-Fi and firmware updates"
+
+config CUBE_WIFI_SSID
+    string "Wi-Fi SSID"
+    default ""
+    help
+        Network to join for firmware updates over Wi-Fi. Empty turns Wi-Fi
+        off, and with it updates over Wi-Fi.
+
+config CUBE_WIFI_PASSWORD
+    string "Wi-Fi password"
+    default ""
+    help
+        Empty for an open network.
+
+config CUBE_HOSTNAME
+    string "Hostname"
+    default "cube"
+    help
+        DHCP and mDNS name: the cube answers at http://<hostname>.local/.
+
+config CUBE_OTA_TOKEN
+    string "Update token"
+    default ""
+    help
+        If set, an update must carry the header
+        "Authorization: Bearer <token>". Empty lets anyone on the network
+        update the cube.
+
+endmenu
+
 endmenu
