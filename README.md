@@ -88,6 +88,56 @@ the gyro calibrates its zero offset then.
 The monitor logs a status line every 100 frames: acceleration,
 rotation rate, and the physics, frame and LED send times.
 
+## Updates over Wi-Fi
+
+Once the cube has been flashed over USB with a Wi-Fi SSID set, it takes
+new firmware over the network. Set the SSID and password (and, ideally,
+an update token) in `idf.py menuconfig` → *Gravity cube* → *Wi-Fi and
+firmware updates*, flash over USB once, then for every update:
+
+```bash
+idf.py build
+curl -H "Authorization: Bearer $TOKEN" \
+     --data-binary @build/gravity-cube.bin http://cube.local/ota
+```
+
+`curl http://cube.local/` shows the running version (from `git
+describe`) and app slot. If `cube.local` does not resolve, use the IP
+address the monitor logs once Wi-Fi is up.
+
+```mermaid
+sequenceDiagram
+    participant PC
+    participant Cube
+    participant Boot as Bootloader
+    PC->>Cube: POST /ota (app image)
+    Cube->>Cube: write image to the other slot, check it
+    Cube-->>PC: Update written, restarting
+    Cube->>Boot: restart
+    Boot->>Cube: boot new image (pending)
+    Cube->>Cube: Wi-Fi up and 100 frames run within 2 min?
+    alt yes
+        Cube->>Boot: keep new image
+    else no, or it crashes first
+        Boot->>Cube: boot previous image
+    end
+```
+
+The flash has two 4 MB app slots ([`partitions.csv`](partitions.csv)):
+the running firmware writes the new image into the other one and boots
+it. A new image only stays if it gets onto the network and runs the main
+loop for 100 frames within two minutes; if not, or if it crashes first,
+the bootloader goes back to the previous image. So a broken build cannot
+cut the cube off from further updates, but one built with no SSID turns
+updates off for good, until the next USB flash.
+
+Wi-Fi, the network stack and the update server run on core 1, next to
+the LED task, so the physics on core 0 keeps its time. Flash writes
+pause both cores for moments at a time, so the fluid stutters for the
+few seconds an update takes.
+
+Without a token, anyone on the network can reflash the cube.
+
 ## Settings
 
 `idf.py menuconfig` → *Gravity cube*:
@@ -100,6 +150,9 @@ rotation rate, and the physics, frame and LED send times.
 | Tap threshold | 1000 mg | Raise it if sloshing changes the colour, lower it if taps are missed |
 | IMU SPI pins | 11, 13, 12, 10 | MOSI, MISO, SCLK, CS |
 | I2C scan at startup | off | Wiring check: probes the IMU pins as I2C; finds the MPU-6500 at 0x68/0x69 after a power on |
+| Wi-Fi SSID, password | empty | Network for updates over Wi-Fi; an empty SSID turns Wi-Fi off |
+| Hostname | cube | Answers at `http://cube.local/` |
+| Update token | empty | Updates need `Authorization: Bearer <token>`; empty lets anyone on the network update |
 
 The particle count and colour are in [`main/core/config.h`](main/core/config.h).
 
@@ -158,6 +211,7 @@ surface does not flicker. A step takes ~17 ms on the ESP32-S3.
 | Path | |
 |---|---|
 | `main/main.c` | Main loop on core 0, LED task on core 1 |
+| `main/ota.c` | Wi-Fi, mDNS and the update server on core 1; keeps or rolls back a new image |
 | `main/mpu6500.c` | MPU-6500 over SPI: setup, gyro calibration, FIFO reads |
 | `main/ws2812.c` | WS2812 chain through the `espressif/led_strip` component (RMT) |
 | `main/core/` | Everything that needs no hardware: fluid, colours, motion filter, tap detector, panel map, IMU sample decoding |

@@ -4,7 +4,8 @@
  * Core 0 (this task) reads the IMU, runs the physics and builds frames;
  * core 1 sends them to the LEDs. The RMT send takes ~11.5 ms per changed
  * frame, so the two overlap: core 0 computes the next frame while core 1
- * sends the current one, and only waits if core 1 is still busy. */
+ * sends the current one, and only waits if core 1 is still busy. Wi-Fi
+ * and firmware updates run on core 1 too (ota.c). */
 #include <math.h>
 
 #include "color.h"
@@ -17,6 +18,7 @@
 #include "freertos/task.h"
 #include "motion.h"
 #include "mpu6500.h"
+#include "ota.h"
 #include "panel.h"
 #include "sdkconfig.h"
 #include "tap.h"
@@ -80,6 +82,9 @@ static void panel_test(void)
 void app_main(void)
 {
     ESP_LOGI(TAG, "Gravity cube, %dx%dx%d", CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
+
+    /* Joins Wi-Fi during the panel test. */
+    ota_start();
 
     s_frames = xQueueCreate(1, sizeof(frame_t));
     xTaskCreatePinnedToCore(led_task, "leds", 4096, NULL, 5, NULL, 1);
@@ -167,6 +172,9 @@ void app_main(void)
                      (unsigned long)loops, accel.x, accel.y, accel.z,
                      v3_len(accel), gyro_rate.x, gyro_rate.y, gyro_rate.z, physics_us, frame_us,
                      s_led_send_us);
+        }
+        if (loops == LOG_EVERY) {
+            ota_app_ok();
         }
 
         /* Fixed step rate: the physics constants are per step. If a frame
