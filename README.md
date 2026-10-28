@@ -77,10 +77,13 @@ idf.py build
 idf.py -p /dev/ttyACM0 flash monitor
 ```
 
-At power on, each panel lights green for 2 seconds in chain order (Left,
-Back, Right, Front, Bottom, Top) before the fluid starts. A dark panel
-is dead or badly connected; if every panel from one point on stays dark,
-the chain is broken at the link before the first dark one.
+At power on, before the fluid starts, each panel in chain order (Left,
+Back, Right, Front, Bottom, Top) fills green LED by LED: from the bottom
+left as seen from outside, row by row, to the top right, about 0.8 s a
+panel. The sides fill upright, Top and Bottom as in the unfolded cross
+(Front edge at the bottom of Top, at the top of Bottom). A dark LED or
+panel is dead or badly connected; if every panel from one point on stays
+dark, the chain is broken at the link before the first dark one.
 
 Keep the cube still from the end of the panel test until a second later:
 the gyro calibrates its zero offset then.
@@ -145,7 +148,7 @@ Without a token, anyone on the network can reflash the cube.
 | Setting | Default | |
 |---|---|---|
 | LED data GPIO | 2 | |
-| Panel test at power on | on | Each panel green for 2 s, in chain order |
+| Panel test at power on | on | Each panel fills green LED by LED, in chain order (~5 s) |
 | Physics step period | 18 ms | The physics constants are per step; a fluid step takes ~17 ms, so 18 ms (55 fps) is the shortest it keeps up with |
 | Tap threshold | 1000 mg | Raise it if sloshing changes the colour, lower it if taps are missed |
 | IMU SPI pins | 11, 13, 12, 10 | MOSI, MISO, SCLK, CS |

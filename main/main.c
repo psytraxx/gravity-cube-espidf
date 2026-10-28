@@ -36,8 +36,9 @@ static const char *TAG = "cube";
 
 #define LOG_EVERY 100
 
-#define PANEL_TEST_MS    2000
-#define PANEL_TEST_COLOR ((color_t){0, 60, 0})
+/* One LED per step; a frame takes ~11.5 ms to send. */
+#define PANEL_TEST_STEP_MS 12
+#define PANEL_TEST_COLOR   ((color_t){0, 60, 0})
 
 /* Frames from core 0 to core 1. One slot. */
 static QueueHandle_t s_frames;
@@ -63,16 +64,21 @@ static void led_task(void *arg)
 }
 
 #if CONFIG_CUBE_PANEL_TEST
-/* Each panel green in turn, chain order; then all off. */
+/* Each panel in turn, chain order, fills green LED by LED: from the
+ * bottom left, row by row, to the top right. Then all off. */
 static void panel_test(void)
 {
     static frame_t frame;
     for (int p = 0; p < PANEL_COUNT; p++) {
         ESP_LOGI(TAG, "Panel test: %d %s", p, panel_name(p));
         frame_clear(&frame);
-        frame_fill_panel(&frame, p, PANEL_TEST_COLOR);
-        xQueueSend(s_frames, &frame, portMAX_DELAY);
-        vTaskDelay(pdMS_TO_TICKS(PANEL_TEST_MS));
+        for (uint8_t row = 0; row < CUBE_SIZE; row++) {
+            for (uint8_t col = 0; col < CUBE_SIZE; col++) {
+                frame_set_panel_led(&frame, p, col, row, PANEL_TEST_COLOR);
+                xQueueSend(s_frames, &frame, portMAX_DELAY);
+                vTaskDelay(pdMS_TO_TICKS(PANEL_TEST_STEP_MS));
+            }
+        }
     }
     frame_clear(&frame);
     xQueueSend(s_frames, &frame, portMAX_DELAY);

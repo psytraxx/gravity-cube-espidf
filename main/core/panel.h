@@ -35,8 +35,12 @@ void frame_clear(frame_t *f);
 /* Light every LED that shows the voxel. */
 void frame_set(frame_t *f, cell_t cell, color_t color);
 
-/* Light every LED of one panel (0-5, chain order). */
-void frame_fill_panel(frame_t *f, int panel, color_t color);
+/* Light one LED of a panel (0-5, chain order), by where it sits seen from
+ * outside the cube: column 0 on the left, row 0 at the bottom. The side
+ * panels are upright and run on from one to the next round the cube; Top
+ * and Bottom lie as in the unfolded cross, Top above Front and Bottom
+ * below it. */
+void frame_set_panel_led(frame_t *f, int panel, uint8_t col, uint8_t row, color_t color);
 
 /* The face a panel sits on, e.g. "Back". */
 const char *panel_name(int panel);

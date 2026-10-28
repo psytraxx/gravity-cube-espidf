@@ -22,10 +22,11 @@ config CUBE_PANEL_TEST
     bool "Panel test at power on"
     default y
     help
-        Before the fluid starts, light each panel green for 2 seconds in
-        chain order (Left, Back, Right, Front, Bottom, Top), so a dead
-        panel or a broken link in the chain shows up straight away: every
-        panel after a break stays dark.
+        Before the fluid starts, fill each panel green LED by LED, from
+        the bottom left row by row to the top right, in chain order (Left,
+        Back, Right, Front, Bottom, Top): about 0.8 seconds a panel. A dead
+        LED or panel, or a broken link in the chain, shows up straight
+        away: every panel after a break stays dark.
 
 config CUBE_TAP_THRESHOLD_MG
     int "Tap threshold (mg)"
