@@ -13,6 +13,21 @@
  * 1.0 is the real thing. */
 #define ROTATION_GAIN 1.0f
 
+/* How much harder than the mean the cube's weight forces (gravity, the
+ * spin speeding up, centrifugal) push each liquid: oil is lighter, water
+ * heavier. The pressure solve carries the mean, so this difference is all
+ * that sorts them; larger separates them faster. */
+static const float LIQUID_WEIGHT[LIQUIDS] = {
+    [LIQUID_OIL] = 0.8f,
+    [LIQUID_WATER] = 1.2f,
+};
+
+/* Where the liquids meet, each particle also slips through the mix along
+ * its weight force, by this times how much heavier (or lighter) it is
+ * than the mix in its cell, in cells per step per cell per step squared.
+ * Without it a film of oil stays trapped under the water. */
+#define SLIP 1.5f
+
 /* Particle radius in cells: particles closer than twice this are pushed
  * apart, and they stay this far from the walls. */
 #define PARTICLE_RADIUS 0.3f
@@ -355,27 +370,33 @@ static void grid_to_particles(fluid_t *f)
     }
 }
 
-/* Particle density and tint at the cell centres, and which voxels the
- * density lights. The pressure solve of the next step uses the same
- * density: particles do not move in between. */
+/* Particle density at the cell centres, in all and per liquid, each
+ * liquid's tint there, and which voxels the density lights. The pressure
+ * solve of the next step uses the same density: particles do not move in
+ * between. */
 static void update_density(fluid_t *f)
 {
-    memset(f->density, 0, sizeof f->density);
+    memset(f->liquid_density, 0, sizeof f->liquid_density);
     memset(f->tint, 0, sizeof f->tint);
     stencil_t s;
     for (int i = 0; i < f->n; i++) {
         const particle_t *p = &f->p[i];
         const float tint = p->tint + FLUID_SPEED_TINT * v3_len(p->vel);
+        float *density = f->liquid_density[p->liquid];
+        float *tints = f->tint[p->liquid];
         cell_stencil(p->pos, &s);
         for (int c = 0; c < 8; c++) {
-            f->density[s.idx[c]] += s.w[c];
-            f->tint[s.idx[c]] += s.w[c] * tint;
+            density[s.idx[c]] += s.w[c];
+            tints[s.idx[c]] += s.w[c] * tint;
         }
     }
     for (int i = 0; i < FLUID_CELLS; i++) {
+        f->density[i] = f->liquid_density[LIQUID_OIL][i] + f->liquid_density[LIQUID_WATER][i];
         f->lit[i] = f->density[i] >= (f->lit[i] ? LIGHT_OFF : LIGHT_ON);
-        if (f->density[i] > 0.0f) {
-            f->tint[i] /= f->density[i];
+        for (int l = 0; l < LIQUIDS; l++) {
+            if (f->liquid_density[l][i] > 0.0f) {
+                f->tint[l][i] /= f->liquid_density[l][i];
+            }
         }
     }
 }
@@ -407,6 +428,7 @@ void fluid_populate(fluid_t *f, int n)
                         .pos = pos,
                         .vel = v3(0.0f, 0.0f, 0.0f),
                         .tint = FLUID_TINT_SPREAD * (2.0f * diagonal - 1.0f),
+                        .liquid = (x + y + z) % 2 ? LIQUID_WATER : LIQUID_OIL,
                     };
                 }
             }
@@ -421,23 +443,72 @@ void fluid_set_rotation(fluid_t *f, vec3_t rotation)
     f->rotation = rotation;
 }
 
+/* The forces that push on a particle's weight, per unit of weight:
+ * gravity, and in the turning cube the Euler force (the spin speeding up)
+ * and the centrifugal force. */
+static vec3_t weight_force(vec3_t pos, vec3_t gravity, vec3_t spin, vec3_t spin_up)
+{
+    const vec3_t r = v3_sub(pos, v3(N / 2.0f, N / 2.0f, N / 2.0f));
+    vec3_t a = gravity;
+    a = v3_sub(a, v3_cross(spin_up, r));
+    a = v3_sub(a, v3_cross(spin, v3_cross(spin, r)));
+    return a;
+}
+
+/* Mean weight of the liquids at cell `cell`, and the particle density
+ * behind it. */
+static float mix_weight(const fluid_t *f, int cell, float *total)
+{
+    float weight = 0.0f;
+    *total = 0.0f;
+    for (int l = 0; l < LIQUIDS; l++) {
+        *total += f->liquid_density[l][cell];
+        weight += f->liquid_density[l][cell] * LIQUID_WEIGHT[l];
+    }
+    return weight;
+}
+
+/* How much heavier particle p is than the mean of the liquids around it:
+ * 0 inside one liquid. The mix is interpolated between the centres of
+ * p's cell and the next one along `force`'s main axis, which is all the
+ * slip needs and much cheaper than all eight cells round it. */
+static float excess_weight(const fluid_t *f, const particle_t *p, vec3_t force)
+{
+    const int at[3] = {cell_of(p->pos.x), cell_of(p->pos.y), cell_of(p->pos.z)};
+    const float ax = fabsf(force.x), ay = fabsf(force.y), az = fabsf(force.z);
+    const int a = ax >= ay && ax >= az ? 0 : ay >= az ? 1 : 2;
+    const float t = axis(p->pos, a) - ((float)at[a] + 0.5f);
+    int next[3] = {at[0], at[1], at[2]};
+    next[a] += t < 0.0f ? -1 : 1;
+    const int cell = cell_index(at[0], at[1], at[2]);
+    const int other = LIQUIDS - 1 - p->liquid;
+    const bool inside = next[a] >= 0 && next[a] < N;
+    const int beside = inside ? cell_index(next[0], next[1], next[2]) : cell;
+    if (f->liquid_density[other][cell] == 0.0f && f->liquid_density[other][beside] == 0.0f) {
+        return 0.0f;
+    }
+    const float w = inside ? fabsf(t) : 0.0f;
+    float total_here, total_beside;
+    const float here = mix_weight(f, cell, &total_here);
+    const float there = mix_weight(f, beside, &total_beside);
+    const float total = (1.0f - w) * total_here + w * total_beside;
+    return total > 0.0f ? LIQUID_WEIGHT[p->liquid] - ((1.0f - w) * here + w * there) / total
+                        : 0.0f;
+}
+
 void fluid_step(fluid_t *f, vec3_t accel)
 {
     const vec3_t gravity = v3_scale(accel, GRAVITY);
-    const vec3_t center = v3(N / 2.0f, N / 2.0f, N / 2.0f);
-    /* In the turning cube the fluid feels the Euler force (the spin
-     * speeding up), Coriolis and centrifugal forces. */
+    /* Besides the weight forces, the turning cube adds the Coriolis force,
+     * which acts on velocity rather than weight. */
     const vec3_t spin = v3_scale(f->rotation, ROTATION_GAIN);
     const vec3_t spin_up = v3_sub(spin, v3_scale(f->last_rotation, ROTATION_GAIN));
     f->last_rotation = f->rotation;
 
     for (int i = 0; i < f->n; i++) {
         particle_t *p = &f->p[i];
-        const vec3_t r = v3_sub(p->pos, center);
-        vec3_t a = gravity;
-        a = v3_sub(a, v3_cross(spin_up, r));
+        vec3_t a = v3_scale(weight_force(p->pos, gravity, spin, spin_up), LIQUID_WEIGHT[p->liquid]);
         a = v3_sub(a, v3_scale(v3_cross(spin, p->vel), 2.0f));
-        a = v3_sub(a, v3_cross(spin, v3_cross(spin, r)));
         p->vel = v3_add(p->vel, a);
     }
 
@@ -454,6 +525,8 @@ void fluid_step(fluid_t *f, vec3_t accel)
         p->vel.y = clampf(p->vel.y, -FLUID_MAX_VELOCITY, FLUID_MAX_VELOCITY);
         p->vel.z = clampf(p->vel.z, -FLUID_MAX_VELOCITY, FLUID_MAX_VELOCITY);
         p->pos = v3_add(p->pos, p->vel);
+        const vec3_t force = weight_force(p->pos, gravity, spin, spin_up);
+        p->pos = v3_add(p->pos, v3_scale(force, SLIP * excess_weight(f, p, force)));
         collide_walls(p);
     }
     for (int pass = 0; pass < SEPARATION_PASSES; pass++) {
@@ -467,7 +540,14 @@ bool fluid_lit(const fluid_t *f, cell_t c)
     return f->lit[cell_index(c.x, c.y, c.z)];
 }
 
+int fluid_liquid(const fluid_t *f, cell_t c)
+{
+    const int i = cell_index(c.x, c.y, c.z);
+    return f->liquid_density[LIQUID_WATER][i] > f->liquid_density[LIQUID_OIL][i] ? LIQUID_WATER
+                                                                                  : LIQUID_OIL;
+}
+
 float fluid_tint(const fluid_t *f, cell_t c)
 {
-    return f->tint[cell_index(c.x, c.y, c.z)];
+    return f->tint[fluid_liquid(f, c)][cell_index(c.x, c.y, c.z)];
 }
