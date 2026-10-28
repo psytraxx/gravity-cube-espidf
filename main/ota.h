@@ -4,7 +4,8 @@
  *
  * The cube joins the Wi-Fi network set in menuconfig, announces itself
  * over mDNS and takes a new image as an HTTP POST to /ota, which it writes
- * to the other app slot and boots. All of it runs on core 1.
+ * to the other app slot and boots. It also starts listening for music
+ * (audio_sync.h). All of it runs on core 1.
  *
  * A freshly updated image has to prove itself: if it does not reach the
  * network and report a working main loop within two minutes, or crashes

@@ -1,5 +1,14 @@
 #include "color.h"
 
+color_t color_dim(color_t c, float scale)
+{
+    return (color_t){
+        (uint8_t)(c.r * scale + 0.5f),
+        (uint8_t)(c.g * scale + 0.5f),
+        (uint8_t)(c.b * scale + 0.5f),
+    };
+}
+
 color_t color_from_hue(uint32_t hue)
 {
     hue %= 360;

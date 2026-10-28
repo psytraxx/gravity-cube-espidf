@@ -51,6 +51,8 @@ typedef struct {
      * this step and the last. */
     vec3_t rotation;
     vec3_t last_rotation;
+    /* Extra lift per column against gravity, in g (see fluid_set_lift). */
+    float lift[CUBE_SIZE * CUBE_SIZE];
 } fluid_t;
 
 void fluid_init(fluid_t *f);
@@ -67,6 +69,12 @@ void fluid_step(fluid_t *f, vec3_t accel);
 /* How far the cube turned since the last step, as a rotation vector in
  * cube axes. Applies to the following steps until set again. */
 void fluid_set_rotation(fluid_t *f, vec3_t rotation);
+
+/* Push the fluid up (against gravity) by lift[u + CUBE_SIZE * v] g in each
+ * column of cells along the axis gravity mostly points along; u and v are
+ * the other two axes, in x, y, z order. Applies to the following steps
+ * until set again; zeros turn it off. */
+void fluid_set_lift(fluid_t *f, const float lift[CUBE_SIZE * CUBE_SIZE]);
 
 /* Whether the fluid fills voxel c. */
 bool fluid_lit(const fluid_t *f, cell_t c);
