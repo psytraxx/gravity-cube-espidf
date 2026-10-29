@@ -31,13 +31,13 @@ endchoice
 
 config CUBE_FRAME_MS
     int "Physics step period (ms)"
-    default 18
+    default 37
     range 5 100
     help
         One physics step per period. The physics constants are per step,
         so a longer period slows the fluid down. A fluid step takes about
-        17 ms on the ESP32-S3, so 18 ms (55 steps a second) is the
-        shortest period it keeps up with; the LED chain needs ~11.5 ms.
+        35 ms on the ESP32-S3, so 37 ms (27 steps a second) leaves it some
+        room; the LED chain needs ~11.5 ms.
 
 config CUBE_PANEL_TEST
     bool "Panel test at power on"

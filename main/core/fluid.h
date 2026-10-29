@@ -50,6 +50,8 @@ typedef struct {
     float tint[LIQUIDS][FLUID_CELLS];
     uint8_t count[FLUID_CELLS];
     bool lit[FLUID_CELLS];
+    /* The liquid each voxel shows (see fluid_liquid). */
+    uint8_t shown[FLUID_CELLS];
     /* Particles per cell as linked lists, for pushing them apart: first
      * particle per cell, next in the same cell; UINT16_MAX ends a list. */
     uint16_t head[FLUID_CELLS];
@@ -62,8 +64,9 @@ typedef struct {
 
 void fluid_init(fluid_t *f);
 
-/* Fill the bottom half of the cube (low z), FLUID_PARTICLES_PER_CELL
- * particles per voxel, with up to `n` particles at rest: oil and water in
+/* Fill the cube from the bottom (low z) up, FLUID_PARTICLES_PER_CELL
+ * particles per voxel, with up to `n` particles at rest (FLUID_PARTICLES
+ * fills it): oil and water in
  * a 3D checkerboard of voxels, which sort themselves out as soon as the
  * fluid runs. Tints run diagonally across the fluid from
  * -FLUID_TINT_SPREAD to +FLUID_TINT_SPREAD. */
@@ -80,7 +83,8 @@ void fluid_set_rotation(fluid_t *f, vec3_t rotation);
 /* Whether the fluid fills voxel c. */
 bool fluid_lit(const fluid_t *f, cell_t c);
 
-/* The liquid that fills most of voxel c: LIQUID_OIL or LIQUID_WATER. */
+/* The liquid voxel c shows, LIQUID_OIL or LIQUID_WATER: the one that
+ * fills most of it, switching only once the other clearly outweighs it. */
 int fluid_liquid(const fluid_t *f, cell_t c);
 
 /* Hue offset in degrees for voxel c: the tints of its particles of

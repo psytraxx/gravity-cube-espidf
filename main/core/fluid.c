@@ -4,10 +4,13 @@
 
 #define N CUBE_SIZE
 
-/* Gravity in cells per step squared: at an 18 ms step, 1 g for 2.3 cm
- * voxels (9.81 m/s^2 * 0.018^2 s^2 / 0.023 m), so the fluid moves a
- * little slower than it would at the cube's real size. */
-#define GRAVITY 0.14f
+/* Gravity in cells per step squared. At a 37 ms step, 1 g for 2.3 cm
+ * voxels would be 0.58 (9.81 m/s^2 * 0.037^2 s^2 / 0.023 m), but above
+ * about 0.25 a step moves the particles too far for the solver to keep the
+ * fluid's volume, and the full cube packs down, leaving its top layer
+ * dark. At 0.25 the fluid moves at about two thirds of the speed it would
+ * at the cube's real size, a little heavy, like oil. */
+#define GRAVITY 0.25f
 
 /* Multiplier on the cube's rotation forces (Euler, Coriolis, centrifugal).
  * 1.0 is the real thing. */
@@ -52,7 +55,12 @@ static const float LIQUID_WEIGHT[LIQUIDS] = {
  * FLUID_PARTICLES_PER_CELL), so particles hovering at a cell boundary do
  * not flicker. */
 #define LIGHT_ON  1.2f
-#define LIGHT_OFF 0.4f
+#define LIGHT_OFF 0.2f
+
+/* A voxel showing one liquid switches to the other once that has this
+ * many times its density there, so voxels on the boundary between the
+ * two, where particles jostle, do not flicker between them. */
+#define LIQUID_SWITCH 2.5f
 
 #define NONE UINT16_MAX
 
@@ -393,6 +401,10 @@ static void update_density(fluid_t *f)
     for (int i = 0; i < FLUID_CELLS; i++) {
         f->density[i] = f->liquid_density[LIQUID_OIL][i] + f->liquid_density[LIQUID_WATER][i];
         f->lit[i] = f->density[i] >= (f->lit[i] ? LIGHT_OFF : LIGHT_ON);
+        const int other = LIQUIDS - 1 - f->shown[i];
+        if (f->liquid_density[other][i] > LIQUID_SWITCH * f->liquid_density[f->shown[i]][i]) {
+            f->shown[i] = (uint8_t)other;
+        }
         for (int l = 0; l < LIQUIDS; l++) {
             if (f->liquid_density[l][i] > 0.0f) {
                 f->tint[l][i] /= f->liquid_density[l][i];
@@ -421,9 +433,8 @@ void fluid_populate(fluid_t *f, int n)
                 for (int k = 0; k < FLUID_PARTICLES_PER_CELL && f->n < n; k++) {
                     const float o = OFFSETS[k % 2];
                     const vec3_t pos = v3((float)x + o, (float)y + o, (float)z + o);
-                    /* 0 in one bottom corner to 1 at the far top edge of a
-                     * half-full cube. */
-                    const float diagonal = (pos.x + pos.y + pos.z) / (2.5f * N);
+                    /* 0 in one bottom corner to 1 in the far top corner. */
+                    const float diagonal = (pos.x + pos.y + pos.z) / (3.0f * N);
                     f->p[f->n++] = (particle_t){
                         .pos = pos,
                         .vel = v3(0.0f, 0.0f, 0.0f),
@@ -436,6 +447,12 @@ void fluid_populate(fluid_t *f, int n)
     }
     memset(f->lit, 0, sizeof f->lit);
     update_density(f);
+    /* Start from whichever liquid fills more of each voxel. */
+    for (int i = 0; i < FLUID_CELLS; i++) {
+        f->shown[i] = f->liquid_density[LIQUID_WATER][i] > f->liquid_density[LIQUID_OIL][i]
+                          ? LIQUID_WATER
+                          : LIQUID_OIL;
+    }
 }
 
 void fluid_set_rotation(fluid_t *f, vec3_t rotation)
@@ -542,9 +559,7 @@ bool fluid_lit(const fluid_t *f, cell_t c)
 
 int fluid_liquid(const fluid_t *f, cell_t c)
 {
-    const int i = cell_index(c.x, c.y, c.z);
-    return f->liquid_density[LIQUID_WATER][i] > f->liquid_density[LIQUID_OIL][i] ? LIQUID_WATER
-                                                                                  : LIQUID_OIL;
+    return f->shown[cell_index(c.x, c.y, c.z)];
 }
 
 float fluid_tint(const fluid_t *f, cell_t c)
