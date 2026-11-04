@@ -19,6 +19,7 @@ a port of the fluid solver in
 | 6 × 8x8 WS2812B panels | 384 LEDs in one chain |
 | 74AHCT125 | 3.3 V to 5 V level shifter for the LED data line |
 | 330 Ω resistor | In series with the data line, at the first panel |
+| INMP441 breakout | I2S microphone, 1.8–3.3 V; wired, but the firmware does not read it |
 | 5 V supply | Sized for the LEDs; the firmware keeps them dim (one channel at 60/255 or less) |
 
 ## Wiring
@@ -60,6 +61,21 @@ SuperMini's header:
 SPI runs at 1 MHz, against 400 kHz for the board's I2C interface, so a
 frame's FIFO read takes a fraction of the time. The pins are settable in
 menuconfig.
+
+### INMP441 microphone (I2S)
+
+| INMP441 board | SuperMini |
+|---|---|
+| VDD | 3V3 |
+| GND | GND |
+| SCK | GPIO 5 (I2S bit clock) |
+| WS | GPIO 6 (I2S word select) |
+| SD | GPIO 7 (I2S data) |
+| L/R | GND (left channel) |
+
+The firmware does not read the microphone. The ESP32-S3 routes I2S to any
+GPIO, so these pins are just free ones next to each other on the header,
+clear of the strapping pins.
 
 ### Mounting
 
