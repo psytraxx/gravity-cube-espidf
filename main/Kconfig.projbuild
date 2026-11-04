@@ -5,7 +5,7 @@ config CUBE_LED_GPIO
     default 2
     help
         Data line of the WS2812 chain, through a 74AHCT125 level shifter
-        and a 330 ohm series resistor. GPIO 2 is on the T-Display-S3's
+        and a 330 ohm series resistor. GPIO 2 is on the ESP32-S3 SuperMini's
         header and is not a strapping pin on the ESP32-S3.
 
 config CUBE_FRAME_MS

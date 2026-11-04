@@ -5,7 +5,7 @@ tilted. Tilt it and the fluid flows downhill; shake it and the fluid
 sloshes; spin it and the fluid swirls against the spin and out to the
 walls. A double tap gives the fluid a new, random colour.
 
-It runs on an ESP32-S3 (LilyGO T-Display-S3) with an MPU-6500 IMU and
+It runs on an ESP32-S3 (ESP32-S3 SuperMini) with an MPU-6500 IMU and
 six 8x8 WS2812 panels, and is written in C for ESP-IDF 6.1. The physics is
 a port of the fluid solver in
 [gravity-cube-rs](https://github.com/psytraxx/gravity-cube-rs).
@@ -14,7 +14,7 @@ a port of the fluid solver in
 
 | Part | Notes |
 |---|---|
-| LilyGO T-Display-S3 | ESP32-S3, 16 MB flash; its LCD is not used |
+| ESP32-S3 SuperMini | ESP32-S3FH4R2: 4 MB flash, 2 MB PSRAM (not used) |
 | MPU-6500 breakout | 3–5 V supply (on-board LDO), wired for SPI |
 | 6 × 8x8 WS2812B panels | 384 LEDs in one chain |
 | 74AHCT125 | 3.3 V to 5 V level shifter for the LED data line |
@@ -25,7 +25,7 @@ a port of the fluid solver in
 
 ### LEDs
 
-| T-Display-S3 | Goes to |
+| SuperMini | Goes to |
 |---|---|
 | GPIO 2 | 74AHCT125 input → 330 Ω → DIN of panel 0 |
 
@@ -45,12 +45,12 @@ The per-panel rotation and mirroring is in
 
 ### MPU-6500 (SPI)
 
-The IMU uses the board's labelled SPI header, which is clear of the LCD
-pins:
+The IMU uses GPIO 10–13, the ESP32-S3's SPI2 IOMUX pins, all on the
+SuperMini's header:
 
-| MPU-6500 board | T-Display-S3 |
+| MPU-6500 board | SuperMini |
 |---|---|
-| VCC | 3V |
+| VCC | 3V3 |
 | GND | GND |
 | SCL (SCLK) | GPIO 12 (SPI_CLK) |
 | SDA (SDI / MOSI) | GPIO 11 (SPI_D) |
@@ -126,7 +126,7 @@ sequenceDiagram
     end
 ```
 
-The flash has two 4 MB app slots ([`partitions.csv`](partitions.csv)):
+The 4 MB flash has two 1984 KB app slots ([`partitions.csv`](partitions.csv)):
 the running firmware writes the new image into the other one and boots
 it. A new image only stays if it gets onto the network and runs the main
 loop for 100 frames within two minutes; if not, or if it crashes first,
