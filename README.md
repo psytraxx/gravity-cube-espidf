@@ -17,18 +17,30 @@ a port of the fluid solver in
 | ESP32-S3 SuperMini | ESP32-S3FH4R2: 4 MB flash, 2 MB PSRAM (not used) |
 | MPU-6500 breakout | 3–5 V supply (on-board LDO), wired for SPI |
 | 6 × 8x8 WS2812B panels | 384 LEDs in one chain |
-| 74AHCT125 | 3.3 V to 5 V level shifter for the LED data line |
 | 330 Ω resistor | In series with the data line, at the first panel |
+| 1500 µF capacitor | Across 5 V and GND at the first panel (10 V or more), against the inrush when the LEDs switch |
+| 1N4007 diode | From the 5 V supply to the SuperMini's 5V pin, so USB cannot feed the LEDs or the supply |
 | INMP441 breakout | I2S microphone, 1.8–3.3 V; wired, but the firmware does not read it |
 | 5 V supply | Sized for the LEDs; the firmware keeps them dim (one channel at 60/255 or less) |
 
 ## Wiring
 
+![Wiring](docs/wiring.svg)
+
+### Power
+
+The 5 V supply feeds the panels directly and the SuperMini through the
+1N4007, anode on the supply, cathode on the board's 5V pin. With USB
+plugged in as well, the diode keeps USB's 5 V out of the supply and the
+LEDs; the board then runs from whichever is higher. The 1500 µF
+capacitor sits across 5 V and GND where the supply meets the first
+panel, + to 5 V. All grounds are common.
+
 ### LEDs
 
 | SuperMini | Goes to |
 |---|---|
-| GPIO 2 | 74AHCT125 input → 330 Ω → DIN of panel 0 |
+| GPIO 2 | 330 Ω → DIN of panel 0 |
 
 The panels are zigzag wired and chain OUT to IN. The four side panels run
 round the cube: each has IN at the bottom of the edge it shares with the
