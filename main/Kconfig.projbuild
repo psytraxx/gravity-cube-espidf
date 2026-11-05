@@ -53,6 +53,14 @@ config CUBE_IMU_SPI_CS
     int "SPI CS GPIO (board CS)"
     default 10
 
+config CUBE_IMU_INT1
+    int "IMU INT1 GPIO (board INT1)"
+    default 9
+    help
+        The BMI160 drives INT1 high on a double tap and holds it there
+        until the firmware has read it. GPIO 9 is on the SuperMini's
+        header and is not a strapping pin.
+
 config CUBE_IMU_I2C_SCAN
     bool "Scan for I2C devices on the IMU pins at startup"
     default n

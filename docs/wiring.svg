@@ -23,6 +23,9 @@
     <path stroke="#1565c0" d="M500 190 H740 M800 190 H830"/>
     <path stroke="#1565c0" d="M740 190 l5 -9 l10 18 l10 -18 l10 18 l10 -18 l10 18 l5 -9"/>
 
+    <!-- IMU interrupt -->
+    <path stroke="#00838f" d="M500 265 H600"/>
+
     <!-- SPI -->
     <path stroke="#6a1b9a" d="M500 290 H600 M500 315 H600 M500 340 H600 M500 365 H600"/>
 
@@ -59,7 +62,7 @@
   <g fill="#f5f5f5" stroke="#444444" stroke-width="1.5">
     <rect x="20" y="280" width="140" height="100" rx="6"/>
     <rect x="300" y="170" width="200" height="360" rx="6"/>
-    <rect x="600" y="270" width="160" height="115" rx="6"/>
+    <rect x="600" y="245" width="160" height="140" rx="6"/>
     <rect x="600" y="430" width="160" height="100" rx="6"/>
     <rect x="830" y="150" width="180" height="380" rx="6"/>
   </g>
@@ -79,6 +82,7 @@
   <text x="366" y="524">GND</text>
   <g text-anchor="end">
     <text x="492" y="194">GPIO 2</text>
+    <text x="492" y="269">GPIO 9</text>
     <text x="492" y="294">GPIO 10</text>
     <text x="492" y="319">GPIO 11</text>
     <text x="492" y="344">GPIO 12</text>
@@ -90,7 +94,8 @@
   </g>
 
   <!-- BMI160 -->
-  <text x="680" y="262" text-anchor="middle" font-weight="bold">BMI160 (SPI)</text>
+  <text x="680" y="237" text-anchor="middle" font-weight="bold">BMI160 (SPI)</text>
+  <text x="608" y="269">INT1</text>
   <text x="608" y="294">CS</text>
   <text x="608" y="319">SDA (SDI)</text>
   <text x="608" y="344">SCL (SCK)</text>
@@ -124,6 +129,7 @@
     <path d="M170 0 H194" stroke="#222222" stroke-width="2.5"/><text x="200" y="4">GND</text>
     <path d="M260 0 H284" stroke="#1565c0" stroke-width="2.5"/><text x="290" y="4">LED data</text>
     <path d="M370 0 H394" stroke="#6a1b9a" stroke-width="2.5"/><text x="400" y="4">IMU SPI</text>
+    <path d="M720 0 H744" stroke="#00838f" stroke-width="2.5"/><text x="750" y="4">IMU INT1</text>
     <path d="M470 0 H494" stroke="#2e7d32" stroke-width="2.5"/><text x="500" y="4">Mic I2S (not read by the firmware)</text>
   </g>
 </svg>

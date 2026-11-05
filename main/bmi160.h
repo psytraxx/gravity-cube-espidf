@@ -3,7 +3,7 @@
  * Samples at 200 Hz into the chip's FIFO (accel ±4 g, gyro ±1000 °/s,
  * normal filter mode), so the main loop collects every sample since the
  * last frame and integrates the gyro over them. The chip's own engine
- * detects double taps. */
+ * detects double taps and latches them on INT1. */
 #pragma once
 
 #include <stdbool.h>
@@ -18,7 +18,8 @@
  * should be still while this runs (about half a second). */
 esp_err_t bmi160_init(void);
 
-/* True once for each double tap since the last call. */
+/* True once for each double tap since the last call. Checks the INT1
+ * pin and only reads the chip when it is high. */
 bool bmi160_double_tap(void);
 
 /* Read up to `max` samples from the FIFO, oldest first, gyro bias removed.
