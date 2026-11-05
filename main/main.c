@@ -30,7 +30,7 @@ static const char *TAG = "cube";
 #define MOTION_SMOOTHING 0.05f
 #define MOTION_GAIN      3.0f
 
-/* FIFO samples read per frame at most; the FIFO holds 42. */
+/* FIFO samples read per frame at most; the FIFO holds 85. */
 #define MAX_SAMPLES 48
 
 #define LOG_EVERY 100

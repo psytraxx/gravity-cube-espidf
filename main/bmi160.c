@@ -101,14 +101,14 @@ static esp_err_t bus_init(void)
         .quadhd_io_num = -1,
         .max_transfer_sz = sizeof s_tx,
     };
-    ESP_RETURN_ON_ERROR(spi_bus_initialize(SPI3_HOST, &bus, SPI_DMA_CH_AUTO), TAG, "spi bus");
+    ESP_RETURN_ON_ERROR(spi_bus_initialize(SPI2_HOST, &bus, SPI_DMA_CH_AUTO), TAG, "spi bus");
     const spi_device_interface_config_t dev = {
         .clock_speed_hz = SPI_HZ,
         .mode = 3,
         .spics_io_num = CONFIG_CUBE_IMU_SPI_CS,
         .queue_size = 1,
     };
-    return spi_bus_add_device(SPI3_HOST, &dev, &s_spi);
+    return spi_bus_add_device(SPI2_HOST, &dev, &s_spi);
 }
 
 static esp_err_t read_regs(uint8_t reg, uint8_t *buf, size_t len)
@@ -125,8 +125,11 @@ static esp_err_t read_regs(uint8_t reg, uint8_t *buf, size_t len)
 
 static esp_err_t write_reg(uint8_t reg, uint8_t value)
 {
-    const uint8_t tx[2] = {reg & 0x7F, value};
-    spi_transaction_t t = {.length = 16, .tx_buffer = tx};
+    spi_transaction_t t = {
+        .flags = SPI_TRANS_USE_TXDATA,
+        .length = 16,
+        .tx_data = {reg & 0x7F, value},
+    };
     const esp_err_t err = spi_device_polling_transmit(s_spi, &t);
     esp_rom_delay_us(s_write_gap_us);
     return err;
@@ -270,10 +273,18 @@ esp_err_t bmi160_init(void)
 
 bool bmi160_double_tap(void)
 {
-    /* INT1 high means a latched interrupt; only then touch the bus. */
+    /* INT1 high means a latched interrupt; only then touch the bus. Only
+     * a rising edge counts, so a line that stays high (INT_RESET not
+     * taking, a short to 3V3) changes the colour once, not every frame. */
+    static bool s_was_high;
     if (!gpio_get_level(CONFIG_CUBE_IMU_INT1)) {
+        s_was_high = false;
         return false;
     }
+    if (s_was_high) {
+        return false;
+    }
+    s_was_high = true;
     uint8_t status = 0;
     const esp_err_t err = read_regs(REG_INT_STATUS0, &status, 1);
     write_reg(REG_CMD, CMD_INT_RESET);

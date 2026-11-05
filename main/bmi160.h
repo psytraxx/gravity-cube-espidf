@@ -19,7 +19,7 @@
 esp_err_t bmi160_init(void);
 
 /* True once for each double tap since the last call. Checks the INT1
- * pin and only reads the chip when it is high. */
+ * pin and only reads the chip when it has gone high. */
 bool bmi160_double_tap(void);
 
 /* Read up to `max` samples from the FIFO, oldest first, gyro bias removed.

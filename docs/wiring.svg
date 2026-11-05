@@ -38,11 +38,11 @@
   <g fill="#222222"><circle cx="360" cy="600" r="4.5"/><circle cx="780" cy="600" r="4.5"/><circle cx="900" cy="600" r="4.5"/><circle cx="780" cy="450" r="4.5"/><circle cx="780" cy="500" r="4.5"/></g>
   <circle cx="620" cy="410" r="4.5" fill="#ef6c00"/>
 
-  <!-- Diode 1N4007: anode on the supply, cathode (bar) to the board -->
+  <!-- Schottky diode 1N5819: anode on the supply, cathode (bar) to the board -->
   <path d="M346 82 H374 L360 108 Z" fill="#d32f2f"/>
-  <path d="M344 110 H376" stroke="#d32f2f" stroke-width="3"/>
-  <text x="384" y="94" font-weight="bold">1N4007</text>
-  <text x="384" y="110" fill="#555555">blocks USB 5 V from the LEDs</text>
+  <path d="M350 104 H344 V110 H376 V116 H370" fill="none" stroke="#d32f2f" stroke-width="3"/>
+  <text x="384" y="94" font-weight="bold">1N5819</text>
+  <text x="384" y="110" fill="#555555">Schottky; blocks USB 5 V from the LEDs</text>
 
   <!-- Capacitor 1500 µF, + to 5 V -->
   <path d="M1042 310 H1078" stroke="#d32f2f" stroke-width="3"/>

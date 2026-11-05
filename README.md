@@ -19,7 +19,7 @@ a port of the fluid solver in
 | 6 × 8x8 WS2812B panels | 384 LEDs in one chain |
 | 330 Ω resistor | In series with the data line, at the first panel |
 | 1500 µF capacitor | Across 5 V and GND at the first panel (10 V or more), against the inrush when the LEDs switch |
-| 1N4007 diode | From the 5 V supply to the SuperMini's 5V pin, so USB cannot feed the LEDs or the supply |
+| 1N5819 Schottky diode | From the 5 V supply to the SuperMini's 5V pin, so USB cannot feed the LEDs or the supply |
 | INMP441 breakout | I2S microphone, 1.8–3.3 V; wired, but the firmware does not read it |
 | 5 V supply | Sized for the LEDs; the firmware keeps them dim (one channel at 60/255 or less) |
 
@@ -30,9 +30,11 @@ a port of the fluid solver in
 ### Power
 
 The 5 V supply feeds the panels directly and the SuperMini through the
-1N4007, anode on the supply, cathode on the board's 5V pin. With USB
-plugged in as well, the diode keeps USB's 5 V out of the supply and the
-LEDs; the board then runs from whichever is higher. The 1500 µF
+1N5819, anode on the supply, cathode (the band) on the board's 5V pin.
+As a Schottky it drops about 0.3 V at the board's current, so the
+SuperMini's regulator gets about 4.7 V. With USB plugged in as well, the
+diode keeps USB's 5 V out of the supply and the LEDs; the board then runs
+from whichever is higher. The 1500 µF
 capacitor sits across 5 V and GND where the supply meets the first
 panel, + to 5 V. All grounds are common.
 
