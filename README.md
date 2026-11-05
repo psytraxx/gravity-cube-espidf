@@ -1,9 +1,11 @@
 # Gravity Cube (ESP-IDF)
 
-Firmware for an 8x8x8 LED cube whose particles fall the way the cube is
-tilted. Tilt it and the fluid flows downhill; shake it and the fluid
-sloshes; spin it and the fluid swirls against the spin and out to the
-walls. A double tap gives the fluid a new, random colour.
+Firmware for an 8x8x8 LED cube full to the brim with two liquids that
+do not mix, half amber oil and half blue water. Tilt it and the water
+runs downhill under the oil; shake it and they slosh and break up into blobs that sort
+themselves out again; spin it and they swirl against the spin, the water
+flung out past the oil. A double tap gives the liquids new, random
+colours.
 
 It runs on an ESP32-S3 (ESP32-S3 SuperMini) with a BMI160 IMU and
 six 8x8 WS2812 panels, and is written in C for ESP-IDF 6.1. The physics is
@@ -195,8 +197,8 @@ Without a token, anyone on the network can reflash the cube.
 | LED data GPIO | 2 | |
 | Panel wiring | Rows | Rows or zigzag columns, see [LEDs](#leds) |
 | Panel test at power on | on | Each panel fills green LED by LED, in chain order (~5 s) |
-| Physics step period | 18 ms | The physics constants are per step; a fluid step takes ~17 ms, so 18 ms (55 fps) is the shortest it keeps up with |
-| Tap threshold | 1000 mg | In 125 mg steps. Raise it if sloshing changes the colour, lower it if taps are missed |
+| Physics step period | 37 ms | The physics constants are per step; a fluid step takes ~35 ms, so 37 ms (27 fps) leaves it some room |
+| Tap threshold | 1000 mg | In 125 mg steps. Raise it if sloshing changes the colours, lower it if taps are missed |
 | IMU SPI pins | 11, 13, 12, 10 | MOSI, MISO, SCLK, CS |
 | IMU INT1 GPIO | 9 | Double-tap interrupt |
 | I2C scan at startup | off | Wiring check: probes the IMU pins as I2C; finds the BMI160 at 0x68/0x69 after a power on |
@@ -204,14 +206,14 @@ Without a token, anyone on the network can reflash the cube.
 | Hostname | cube | Answers at `http://cube.local/` |
 | Update token | empty | Updates need `Authorization: Bearer <token>`; empty lets anyone on the network update |
 
-The particle count and colour are in [`main/core/config.h`](main/core/config.h).
+The particle count and colours are in [`main/core/config.h`](main/core/config.h).
 
 ## How it works
 
 ```mermaid
 flowchart LR
     IMU[BMI160 FIFO<br/>200 Hz] --> MF[motion filter]
-    TAP[BMI160 tap engine] -->|double tap: random hue| FB
+    TAP[BMI160 tap engine] -->|double tap: random hues| FB
     MF -->|gravity + amplified motion| FX[fluid step]
     IMU -->|gyro, integrated| FX
     FX --> FB[frame builder]
@@ -240,22 +242,44 @@ acceleration above the threshold, after at least 30 ms of stillness,
 counts as a tap, and the 50 ms after it belong to the same tap; a second
 tap within 375 ms latches a double tap and drives INT1 high. The main
 loop checks the pin once a frame, and only when it is high reads and
-clears the interrupt over SPI; it answers with a random hue at least 60° from the current
-one. Shaking never has the stillness, so it does not
-change the colour. Every hue's channels add up to 60/255, so the cube
-draws the same current in any colour.
+clears the interrupt over SPI; it answers with a random hue for the oil
+at least 60° from the current one, and the water takes the opposite hue.
+Shaking never has the stillness, so it does not change the colours.
+Every hue's channels add up to 60/255, so the cube draws the same
+current in any colour.
 
 **Fluid.** An incompressible FLIP fluid: inviscid Navier-Stokes on a
-staggered grid with one cell per voxel, carried by 512 particles (two per
-voxel of a half-full cube). Each step the particles take gravity and the
+staggered grid with one cell per voxel, carried by 1024 particles (two per
+voxel of the full cube). Each step the particles take gravity and the
 forces of the turning cube (Euler, Coriolis, centrifugal), hand their
 velocity to the grid, and a Gauss-Seidel pressure solve makes the flow
 divergence-free against the walls. The particles take back the change
 (80 % FLIP, 20 % PIC to damp noise), move, and are pushed apart so they
 stay evenly spread; cells packed above two particles get a little
 outflow, so the fluid keeps its volume. A voxel lights once the particle
-density at its centre reaches 1.2 and goes dark below 0.4, so a settled
-surface does not flicker. A step takes ~17 ms on the ESP32-S3.
+density at its centre reaches 1.2 and goes dark below 0.2, so no voxel
+flickers where the fluid thins for a moment. Gravity is 0.25 cells per
+step squared: real gravity at a 37 ms step would be 0.58, but beyond
+about 0.25 a step moves the particles too far for the solver to keep the
+full cube's volume, and its top layer goes dark. So the fluid moves at
+about two thirds of real speed, a little heavy, like oil. A step takes
+~35 ms on the ESP32-S3.
+
+**Oil and water.** Each particle is oil or water, and they start in a 3D
+checkerboard that sorts itself out within a second. Gravity and the
+weight forces of the turning cube (Euler, centrifugal) push water 1.2
+times as hard as the mean and oil 0.8 times; the pressure solve carries
+the mean, so the difference is what sorts them, and spinning the cube
+works as a centrifuge. Where the two meet, each particle also slips
+through the mix along that force, by how much heavier or lighter it is
+than the liquids around it; without that, a film of oil stays trapped
+under the water. A voxel shows whichever liquid fills most of it, in that
+liquid's colour and tints only, so the boundary stays sharp and the
+colours never blend; it only switches once the other liquid has 2.5
+times its density there, so the boundary, where particles jostle, does
+not flicker. In the closed, full cube the fluid never quite settles: the
+volume correction keeps it churning slowly inside, and the boundary
+still shimmers a little.
 
 ## Enclosure
 

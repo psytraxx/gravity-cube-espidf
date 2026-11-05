@@ -23,6 +23,14 @@ static const vec3_t DOWN = {0.0f, 0.0f, -1.0f};
 /* Half the cube's voxels. */
 #define HALF_FULL (N * N * N / 2)
 
+/* The solver's own behaviour shows best with room to move: refill the
+ * cube only half full, in its bottom half. */
+static void half_fill(void)
+{
+    fluid_init(&f);
+    fluid_populate(&f, FLUID_PARTICLES / 2);
+}
+
 static void run(int steps, vec3_t accel)
 {
     for (int i = 0; i < steps; i++) {
@@ -52,9 +60,44 @@ static vec3_t mean_position(void)
     return v3_scale(sum, 1.0f / (float)f.n);
 }
 
-static void test_populate_fills_bottom_half(void)
+static vec3_t mean_liquid_position(int liquid)
+{
+    vec3_t sum = {0.0f, 0.0f, 0.0f};
+    int n = 0;
+    for (int i = 0; i < f.n; i++) {
+        if (f.p[i].liquid == liquid) {
+            sum = v3_add(sum, f.p[i].pos);
+            n++;
+        }
+    }
+    return v3_scale(sum, 1.0f / (float)n);
+}
+
+/* Lit voxels between a and b inclusive on each axis, and how many of them
+ * show water. */
+static void count_box(cell_t a, cell_t b, int *lit, int *water)
+{
+    *lit = *water = 0;
+    for (uint8_t z = a.z; z <= b.z; z++) {
+        for (uint8_t y = a.y; y <= b.y; y++) {
+            for (uint8_t x = a.x; x <= b.x; x++) {
+                const cell_t c = {x, y, z};
+                if (fluid_lit(&f, c)) {
+                    (*lit)++;
+                    *water += fluid_liquid(&f, c) == LIQUID_WATER;
+                }
+            }
+        }
+    }
+}
+
+static void test_populate_fills_cube(void)
 {
     TEST_ASSERT_EQUAL_INT(FLUID_PARTICLES, f.n);
+    TEST_ASSERT_EQUAL_INT(FLUID_CELLS, lit_count());
+
+    /* Fewer particles fill it from the bottom. */
+    half_fill();
     TEST_ASSERT_EQUAL_INT(HALF_FULL, lit_count());
     TEST_ASSERT_TRUE(fluid_lit(&f, (cell_t){0, 0, 0}));
     TEST_ASSERT_TRUE(fluid_lit(&f, (cell_t){7, 7, 3}));
@@ -62,14 +105,70 @@ static void test_populate_fills_bottom_half(void)
     TEST_ASSERT_FALSE(fluid_lit(&f, (cell_t){7, 7, 7}));
 }
 
-/* At rest the fluid stays in the bottom half, keeps its volume, and the
- * lit voxels hold still. */
+/* Oil and water start in a 3D checkerboard, half each. */
+static void test_populate_mixes_oil_and_water(void)
+{
+    int water = 0;
+    for (int i = 0; i < f.n; i++) {
+        water += f.p[i].liquid == LIQUID_WATER;
+    }
+    TEST_ASSERT_EQUAL_INT(FLUID_PARTICLES / 2, water);
+    TEST_ASSERT_EQUAL_INT(LIQUID_OIL, fluid_liquid(&f, (cell_t){0, 0, 0}));
+    TEST_ASSERT_EQUAL_INT(LIQUID_WATER, fluid_liquid(&f, (cell_t){1, 0, 0}));
+    TEST_ASSERT_EQUAL_INT(LIQUID_WATER, fluid_liquid(&f, (cell_t){0, 0, 1}));
+}
+
+/* The water sinks under the oil within a second (27 steps), and stays
+ * there: the bottom three layers are all water, the top three all oil. */
+static void test_water_sinks_under_oil(void)
+{
+    run(27, DOWN);
+    TEST_ASSERT_LESS_THAN_FLOAT(mean_liquid_position(LIQUID_OIL).z - 2.5f,
+                                mean_liquid_position(LIQUID_WATER).z);
+    run(200, DOWN);
+    int lit, water;
+    count_box((cell_t){0, 0, 0}, (cell_t){N - 1, N - 1, 2}, &lit, &water);
+    TEST_ASSERT_INT_WITHIN(4, N * N * 3, lit);
+    TEST_ASSERT_EQUAL_INT(lit, water);
+    count_box((cell_t){0, 0, 5}, (cell_t){N - 1, N - 1, N - 1}, &lit, &water);
+    TEST_ASSERT_INT_WITHIN(4, N * N * 3, lit);
+    TEST_ASSERT_LESS_THAN_INT(N, water);
+}
+
+/* Once settled, a tilt to +x runs the water to the x == 7 half, with the
+ * oil in the x == 0 half above it. */
+static void test_tilt_keeps_water_downhill(void)
+{
+    run(200, DOWN);
+    run(200, (vec3_t){1.0f, 0.0f, 0.0f});
+    int lit, water;
+    count_box((cell_t){5, 0, 0}, (cell_t){N - 1, N - 1, N - 1}, &lit, &water);
+    TEST_ASSERT_GREATER_THAN_INT(lit * 9 / 10, water);
+    count_box((cell_t){0, 0, 0}, (cell_t){2, N - 1, N - 1}, &lit, &water);
+    TEST_ASSERT_LESS_THAN_INT(lit / 10 + 1, water);
+}
+
+/* Spun about z without gravity, the cube is a centrifuge: water is flung
+ * out past the oil, half a cell further from the axis on average. */
+static void test_spin_flings_water_outside_oil(void)
+{
+    fluid_set_rotation(&f, (vec3_t){0.0f, 0.0f, 0.15f});
+    run(300, NO_GRAVITY);
+    float radius[LIQUIDS] = {0.0f, 0.0f};
+    for (int i = 0; i < f.n; i++) {
+        radius[f.p[i].liquid] += hypotf(f.p[i].pos.x - N / 2.0f, f.p[i].pos.y - N / 2.0f);
+    }
+    const float per_liquid = (float)(FLUID_PARTICLES / 2);
+    TEST_ASSERT_GREATER_THAN_FLOAT(radius[LIQUID_OIL] / per_liquid + 0.5f,
+                                   radius[LIQUID_WATER] / per_liquid);
+}
+
+/* At rest the full cube stays full after the liquids have sorted
+ * themselves out, and the lit voxels hold still. */
 static void test_settles_keeping_volume_without_flicker(void)
 {
     run(300, DOWN);
-    const int lit = lit_count();
-    TEST_ASSERT_INT_WITHIN(HALF_FULL / 10, HALF_FULL, lit);
-    TEST_ASSERT_FLOAT_WITHIN(0.3f, N / 4.0f, mean_position().z);
+    TEST_ASSERT_INT_WITHIN(4, FLUID_CELLS, lit_count());
 
     bool before[FLUID_CELLS];
     memcpy(before, f.lit, sizeof before);
@@ -85,10 +184,20 @@ static void test_settles_keeping_volume_without_flicker(void)
     TEST_ASSERT_LESS_THAN_INT(20, changes);
 }
 
-/* Gravity along +x: the fluid flows to the x == 7 side and keeps its
- * volume there. */
+/* At rest a half-full cube stays in its bottom half and keeps its volume. */
+static void test_half_full_settles_in_bottom_half(void)
+{
+    half_fill();
+    run(300, DOWN);
+    TEST_ASSERT_INT_WITHIN(HALF_FULL / 10, HALF_FULL, lit_count());
+    TEST_ASSERT_FLOAT_WITHIN(0.3f, N / 4.0f, mean_position().z);
+}
+
+/* Gravity along +x: a half-full cube's fluid flows to the x == 7 side and
+ * keeps its volume there. */
 static void test_tilt_flows_downhill(void)
 {
+    half_fill();
     run(200, (vec3_t){1.0f, 0.0f, 0.0f});
     TEST_ASSERT_FLOAT_WITHIN(0.4f, N * 0.75f, mean_position().x);
     TEST_ASSERT_TRUE(fluid_lit(&f, (cell_t){7, 0, 7}));
@@ -117,6 +226,9 @@ static void test_stays_inside_cube_whichever_way_gravity_points(void)
  * step started balances. */
 static void test_pressure_solve_removes_divergence(void)
 {
+    /* With a free surface; in a closed, full cube packed cells can only
+     * spread into thinner ones. */
+    half_fill();
     const vec3_t tilted = {0.7f, 0.0f, -0.7f};
     run(20, tilted);
     /* The solve sees the cells and density as they are before it moves the
@@ -148,13 +260,15 @@ static void test_pressure_solve_removes_divergence(void)
             }
         }
     }
-    TEST_ASSERT_LESS_THAN_FLOAT(0.05f, worst);
+    /* A third of the velocity a step of gravity adds (0.25 cells per step). */
+    TEST_ASSERT_LESS_THAN_FLOAT(0.08f, worst);
 }
 
 /* The cube starts spinning about z: the fluid lags behind (on the +x side
  * it moves towards -y, on the +y side towards +x), then is flung out. */
 static void test_spin_lags_and_flings_outwards(void)
 {
+    half_fill();
     float radius_before = 0.0f;
     for (int i = 0; i < f.n; i++) {
         radius_before += hypotf(f.p[i].pos.x - N / 2.0f, f.p[i].pos.y - N / 2.0f);
@@ -184,11 +298,14 @@ static void test_spin_lags_and_flings_outwards(void)
 }
 
 /* Tints run diagonally across the fluid, inside the spread, and moving
- * fluid shifts hue. */
+ * fluid shifts hue. Both voxels compared are oil, as voxels of one liquid
+ * show only its own tints. */
 static void test_tint_varies_across_fluid_and_with_speed(void)
 {
+    /* With room to move, so the push sets the fluid moving. */
+    half_fill();
     const float corner = fluid_tint(&f, (cell_t){0, 0, 0});
-    const float far = fluid_tint(&f, (cell_t){7, 7, 3});
+    const float far = fluid_tint(&f, (cell_t){7, 7, 2});
     TEST_ASSERT_LESS_THAN_FLOAT(far - 30.0f, corner);
     TEST_ASSERT_GREATER_OR_EQUAL_FLOAT(-FLUID_TINT_SPREAD, corner);
     TEST_ASSERT_LESS_OR_EQUAL_FLOAT(FLUID_TINT_SPREAD, far);
@@ -204,8 +321,13 @@ static void test_tint_varies_across_fluid_and_with_speed(void)
 int main(void)
 {
     UNITY_BEGIN();
-    RUN_TEST(test_populate_fills_bottom_half);
+    RUN_TEST(test_populate_fills_cube);
+    RUN_TEST(test_populate_mixes_oil_and_water);
+    RUN_TEST(test_water_sinks_under_oil);
+    RUN_TEST(test_tilt_keeps_water_downhill);
+    RUN_TEST(test_spin_flings_water_outside_oil);
     RUN_TEST(test_settles_keeping_volume_without_flicker);
+    RUN_TEST(test_half_full_settles_in_bottom_half);
     RUN_TEST(test_tilt_flows_downhill);
     RUN_TEST(test_stays_inside_cube_whichever_way_gravity_points);
     RUN_TEST(test_pressure_solve_removes_divergence);

@@ -10,6 +10,11 @@
  * grid velocity itself to damp noise). A voxel lights while particles
  * fill it.
  *
+ * The fluid is two liquids that do not mix, oil and water. Water is
+ * heavier: gravity and the cube's turning push it harder than the oil, so
+ * it sinks under the oil and is flung out past it. A voxel shows the
+ * liquid that fills most of it, so the two never blend.
+ *
  * Units are cells and steps: positions run from 0.0 to CUBE_SIZE, voxel c
  * spans [c, c + 1), velocities are cells per step. */
 #pragma once
@@ -37,12 +42,16 @@ typedef struct {
     float vel[3][FLUID_FACES];
     float prev[3][FLUID_FACES];
     float weight[3][FLUID_FACES];
-    /* Particle density at each cell's centre, the density-weighted mean
-     * tint there (speed included), and particles per cell. */
+    /* Particle density at each cell's centre, in all and per liquid, the
+     * density-weighted mean tint of each liquid there (speed included),
+     * and particles per cell. */
     float density[FLUID_CELLS];
-    float tint[FLUID_CELLS];
+    float liquid_density[LIQUIDS][FLUID_CELLS];
+    float tint[LIQUIDS][FLUID_CELLS];
     uint8_t count[FLUID_CELLS];
     bool lit[FLUID_CELLS];
+    /* The liquid each voxel shows (see fluid_liquid). */
+    uint8_t shown[FLUID_CELLS];
     /* Particles per cell as linked lists, for pushing them apart: first
      * particle per cell, next in the same cell; UINT16_MAX ends a list. */
     uint16_t head[FLUID_CELLS];
@@ -55,9 +64,12 @@ typedef struct {
 
 void fluid_init(fluid_t *f);
 
-/* Fill the bottom half of the cube (low z), FLUID_PARTICLES_PER_CELL
- * particles per voxel, with up to `n` particles at rest. Tints run
- * diagonally across the fluid from -FLUID_TINT_SPREAD to +FLUID_TINT_SPREAD. */
+/* Fill the cube from the bottom (low z) up, FLUID_PARTICLES_PER_CELL
+ * particles per voxel, with up to `n` particles at rest (FLUID_PARTICLES
+ * fills it): oil and water in
+ * a 3D checkerboard of voxels, which sort themselves out as soon as the
+ * fluid runs. Tints run diagonally across the fluid from
+ * -FLUID_TINT_SPREAD to +FLUID_TINT_SPREAD. */
 void fluid_populate(fluid_t *f, int n);
 
 /* Advance one step. `accel` is gravity plus motion in g, in cube axes,
@@ -71,6 +83,10 @@ void fluid_set_rotation(fluid_t *f, vec3_t rotation);
 /* Whether the fluid fills voxel c. */
 bool fluid_lit(const fluid_t *f, cell_t c);
 
-/* Hue offset in degrees for voxel c: its particles' tints, plus
- * FLUID_SPEED_TINT for their speed. */
+/* The liquid voxel c shows, LIQUID_OIL or LIQUID_WATER: the one that
+ * fills most of it, switching only once the other clearly outweighs it. */
+int fluid_liquid(const fluid_t *f, cell_t c);
+
+/* Hue offset in degrees for voxel c: the tints of its particles of
+ * fluid_liquid(), plus FLUID_SPEED_TINT for their speed. */
 float fluid_tint(const fluid_t *f, cell_t c);

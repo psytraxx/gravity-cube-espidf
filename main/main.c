@@ -1,5 +1,5 @@
-/* Gravity cube: particles on an 8x8x8 LED cube that fall the way the cube
- * is tilted.
+/* Gravity cube: two liquids, oil and water, on an 8x8x8 LED cube that
+ * flow the way the cube is tilted.
  *
  * Core 0 (this task) reads the IMU, runs the physics and builds frames;
  * core 1 sends them to the LEDs. The RMT send takes ~11.5 ms per changed
@@ -114,7 +114,8 @@ void app_main(void)
     static fluid_t fluid;
     fluid_init(&fluid);
     fluid_populate(&fluid, FLUID_PARTICLES);
-    ESP_LOGI(TAG, "%d fluid particles; double-tap the cube to change colour", FLUID_PARTICLES);
+    ESP_LOGI(TAG, "%d fluid particles, oil and water; double-tap the cube to change colour",
+             FLUID_PARTICLES);
     uint32_t hue = FLUID_HUE;
 
     motion_filter_t motion;
@@ -163,8 +164,10 @@ void app_main(void)
                 for (uint8_t x = 0; x < CUBE_SIZE; x++) {
                     const cell_t c = {x, y, z};
                     if (fluid_lit(&fluid, c)) {
+                        const int gap = fluid_liquid(&fluid, c) == LIQUID_WATER ? LIQUID_HUE_GAP : 0;
                         const int tint = (int)lrintf(fluid_tint(&fluid, c));
-                        frame_set(&frame, c, color_from_hue((uint32_t)((int)hue + 360 + tint)));
+                        frame_set(&frame, c,
+                                  color_from_hue((uint32_t)((int)hue + gap + 360 + tint)));
                     }
                 }
             }

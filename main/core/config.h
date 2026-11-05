@@ -13,14 +13,22 @@ typedef struct {
     uint8_t r, g, b;
 } color_t;
 
-/* Fluid: half the cube full at two particles per voxel, starting green. A
- * double tap picks a random hue; its channels always add up to
- * FLUID_LEVEL, so every colour draws the current of one channel at
- * 60/255, a fraction of white's. */
+/* Fluid: the whole cube full at two particles per voxel, starting with
+ * amber oil and blue water. A double tap picks a random hue for the oil;
+ * the water is always LIQUID_HUE_GAP degrees round from it. A hue's
+ * channels always add up to FLUID_LEVEL, so every colour draws the
+ * current of one channel at 60/255, a fraction of white's. */
 #define FLUID_PARTICLES_PER_CELL 2
-#define FLUID_PARTICLES          (FLUID_PARTICLES_PER_CELL * CUBE_SIZE * CUBE_SIZE * CUBE_SIZE / 2)
+#define FLUID_PARTICLES          (FLUID_PARTICLES_PER_CELL * CUBE_SIZE * CUBE_SIZE * CUBE_SIZE)
 #define FLUID_LEVEL              60
-#define FLUID_HUE                120
+#define FLUID_HUE                40
+
+/* Two liquids that do not mix, half the cube each: light oil and heavy
+ * water. */
+#define LIQUID_OIL     0
+#define LIQUID_WATER   1
+#define LIQUIDS        2
+#define LIQUID_HUE_GAP 180
 
 /* Each particle carries a tint, a hue offset of up to this many degrees
  * either side of the fluid's hue, so the fluid is not one flat colour and
