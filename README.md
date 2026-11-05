@@ -44,10 +44,17 @@ panel, + to 5 V. All grounds are common.
 |---|---|
 | GPIO 2 | 330 Ω → DIN of panel 0 |
 
-The panels are zigzag wired and chain OUT to IN. The four side panels run
-round the cube: each has IN at the bottom of the edge it shares with the
-previous panel, runs up the first column, down the next and so on, to OUT
-at the bottom of the edge with the next one:
+The panels chain OUT to IN. The four side panels run round the cube, each
+with IN at the bottom of the edge it shares with the previous panel. Inside
+a panel the chain runs one of two ways, set by *Panel wiring* in
+menuconfig:
+
+- **Rows** (default): along the bottom row, then each row above it from the
+  same side, to OUT at the top of the edge with the next panel.
+- **Zigzag columns**: up the first column, down the next and so on, to OUT
+  at the bottom of the edge with the next panel.
+
+Top and Bottom keep their IN corner and turn the same way.
 
 ```mermaid
 flowchart LR
@@ -186,6 +193,7 @@ Without a token, anyone on the network can reflash the cube.
 | Setting | Default | |
 |---|---|---|
 | LED data GPIO | 2 | |
+| Panel wiring | Rows | Rows or zigzag columns, see [LEDs](#leds) |
 | Panel test at power on | on | Each panel fills green LED by LED, in chain order (~5 s) |
 | Physics step period | 18 ms | The physics constants are per step; a fluid step takes ~17 ms, so 18 ms (55 fps) is the shortest it keeps up with |
 | Tap threshold | 1000 mg | In 125 mg steps. Raise it if sloshing changes the colour, lower it if taps are missed |

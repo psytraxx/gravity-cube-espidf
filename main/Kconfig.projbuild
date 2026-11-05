@@ -8,6 +8,27 @@ config CUBE_LED_GPIO
         resistor. GPIO 2 is on the ESP32-S3 SuperMini's header and is
         not a strapping pin on the ESP32-S3.
 
+choice CUBE_PANEL_WIRING
+    prompt "Panel wiring"
+    default CUBE_PANEL_WIRING_ROWS
+    help
+        How the chain runs through each panel, starting from IN at the
+        bottom of the edge a side panel shares with the previous one.
+
+config CUBE_PANEL_WIRING_ROWS
+    bool "Rows"
+    help
+        Along the bottom row, then each row above it from the same side,
+        to OUT at the top of the edge with the next panel.
+
+config CUBE_PANEL_WIRING_ZIGZAG
+    bool "Zigzag columns"
+    help
+        Up the first column, down the next and so on, to OUT at the
+        bottom of the edge with the next panel.
+
+endchoice
+
 config CUBE_FRAME_MS
     int "Physics step period (ms)"
     default 18

@@ -88,6 +88,12 @@ void app_main(void)
 {
     ESP_LOGI(TAG, "Gravity cube, %dx%dx%d", CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
 
+#if CONFIG_CUBE_PANEL_WIRING_ROWS
+    panel_set_wiring(PANEL_WIRING_ROWS);
+#else
+    panel_set_wiring(PANEL_WIRING_ZIGZAG);
+#endif
+
     /* Joins Wi-Fi during the panel test. */
     ota_start();
 
