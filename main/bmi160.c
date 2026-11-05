@@ -28,6 +28,7 @@ static const char *TAG = "bmi160";
 #define REG_GYR_RANGE    0x43
 #define REG_FIFO_CONFIG1 0x47
 #define REG_INT_EN0      0x50
+#define REG_INT_OUT_CTRL 0x53
 #define REG_INT_LATCH    0x54
 #define REG_INT_MAP0     0x55
 #define REG_INT_TAP0     0x63
@@ -66,6 +67,8 @@ static const char *TAG = "bmi160";
 #define TAP_TH_MAX            31
 #define INT_D_TAP             0x10 /* INT_EN_0, INT_MAP_0 and INT_STATUS_0 */
 #define INT_LATCHED           0x0F
+/* INT1 output on, push-pull, active high; INT2 off. */
+#define INT1_PUSH_PULL_HIGH   0x0A
 
 #define FIFO_SIZE 1024
 
@@ -192,6 +195,13 @@ esp_err_t bmi160_init(void)
     i2c_scan();
 #endif
     ESP_RETURN_ON_ERROR(bus_init(), TAG, "bus");
+    /* The pull-down holds INT1 low until the chip drives it. */
+    const gpio_config_t int1 = {
+        .pin_bit_mask = 1ULL << CONFIG_CUBE_IMU_INT1,
+        .mode = GPIO_MODE_INPUT,
+        .pull_down_en = GPIO_PULLDOWN_ENABLE,
+    };
+    ESP_RETURN_ON_ERROR(gpio_config(&int1), TAG, "int1 gpio");
 
     ESP_RETURN_ON_ERROR(select_spi(), TAG, "no answer");
     s_write_gap_us = WRITE_GAP_SUSPEND_US;
@@ -236,8 +246,8 @@ esp_err_t bmi160_init(void)
     tap_th = tap_th < 1 ? 1 : tap_th > TAP_TH_MAX ? TAP_TH_MAX : tap_th;
     ESP_RETURN_ON_ERROR(write_reg(REG_INT_TAP0, TAP_QUIET30_SHOCK50_DUR375), TAG, "tap0");
     ESP_RETURN_ON_ERROR(write_reg(REG_INT_TAP1, (uint8_t)tap_th), TAG, "tap1");
-    /* Latched, so a double tap waits in INT_STATUS_0 until it is read. It
-     * is mapped to INT1, whose output stays off: the pin is not wired. */
+    /* Latched, so INT1 stays high after a double tap until INT_RESET. */
+    ESP_RETURN_ON_ERROR(write_reg(REG_INT_OUT_CTRL, INT1_PUSH_PULL_HIGH), TAG, "int out");
     ESP_RETURN_ON_ERROR(write_reg(REG_INT_LATCH, INT_LATCHED), TAG, "latch");
     ESP_RETURN_ON_ERROR(write_reg(REG_INT_MAP0, INT_D_TAP), TAG, "int map");
     ESP_RETURN_ON_ERROR(write_reg(REG_INT_EN0, INT_D_TAP), TAG, "int en");
@@ -260,12 +270,14 @@ esp_err_t bmi160_init(void)
 
 bool bmi160_double_tap(void)
 {
-    uint8_t status;
-    if (read_regs(REG_INT_STATUS0, &status, 1) != ESP_OK || !(status & INT_D_TAP)) {
+    /* INT1 high means a latched interrupt; only then touch the bus. */
+    if (!gpio_get_level(CONFIG_CUBE_IMU_INT1)) {
         return false;
     }
+    uint8_t status = 0;
+    const esp_err_t err = read_regs(REG_INT_STATUS0, &status, 1);
     write_reg(REG_CMD, CMD_INT_RESET);
-    return true;
+    return err == ESP_OK && (status & INT_D_TAP);
 }
 
 int bmi160_read(imu_sample_t *out, int max)

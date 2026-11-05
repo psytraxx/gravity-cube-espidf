@@ -58,8 +58,8 @@ The per-panel rotation and mirroring is in
 
 ### BMI160 (SPI)
 
-The IMU uses GPIO 10–13, the ESP32-S3's SPI2 IOMUX pins, all on the
-SuperMini's header:
+The IMU uses GPIO 10–13, the ESP32-S3's SPI2 IOMUX pins, and GPIO 9 for
+its interrupt line, all on the SuperMini's header:
 
 | BMI160 board | SuperMini |
 |---|---|
@@ -69,9 +69,11 @@ SuperMini's header:
 | SDA (SDI / MOSI) | GPIO 11 (SPI_D) |
 | SA0 (SDO / MISO) | GPIO 13 (SPI_Q) |
 | CS (CSB) | GPIO 10 (SPI_CS) |
+| INT1 | GPIO 9 |
 
-VIN (into the board's regulator), INT1, INT2 and the auxiliary pins
-(OCS, SCX, SDX) stay unconnected. The chip starts on I2C; the first
+VIN (into the board's regulator), INT2 and the auxiliary pins (OCS,
+SCX, SDX) stay unconnected. INT1 is push-pull at 3.3 V, so it needs no
+resistor. The chip starts on I2C; the first
 rising edge on CS switches it to SPI until it is power cycled. SPI runs
 at 1 MHz (the chip takes up to 10 MHz). The pins are settable in
 menuconfig.
@@ -186,6 +188,7 @@ Without a token, anyone on the network can reflash the cube.
 | Physics step period | 18 ms | The physics constants are per step; a fluid step takes ~17 ms, so 18 ms (55 fps) is the shortest it keeps up with |
 | Tap threshold | 1000 mg | In 125 mg steps. Raise it if sloshing changes the colour, lower it if taps are missed |
 | IMU SPI pins | 11, 13, 12, 10 | MOSI, MISO, SCLK, CS |
+| IMU INT1 GPIO | 9 | Double-tap interrupt |
 | I2C scan at startup | off | Wiring check: probes the IMU pins as I2C; finds the BMI160 at 0x68/0x69 after a power on |
 | Wi-Fi SSID, password | empty | Network for updates over Wi-Fi; an empty SSID turns Wi-Fi off |
 | Hostname | cube | Answers at `http://cube.local/` |
@@ -225,8 +228,9 @@ not overshoot.
 **Double tap.** The BMI160's tap engine finds them: a jump in
 acceleration above the threshold, after at least 30 ms of stillness,
 counts as a tap, and the 50 ms after it belong to the same tap; a second
-tap within 375 ms latches a double tap, which the main loop picks up once
-a frame and answers with a random hue at least 60° from the current
+tap within 375 ms latches a double tap and drives INT1 high. The main
+loop checks the pin once a frame, and only when it is high reads and
+clears the interrupt over SPI; it answers with a random hue at least 60° from the current
 one. Shaking never has the stillness, so it does not
 change the colour. Every hue's channels add up to 60/255, so the cube
 draws the same current in any colour.
