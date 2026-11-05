@@ -11,7 +11,7 @@ hardware, wiring and design.
 ## Layout
 
 - `main/core/` holds everything that needs no hardware (fluid, colours,
-  motion filter, tap detector, panel map, IMU decoding). It must not include
+  motion filter, panel map, IMU decoding). It must not include
   ESP-IDF or `sdkconfig.h` headers, so it builds on the host.
 - `main/*.c` are the ESP-IDF parts: main loop, BMI160 driver, WS2812
   driver. Pins and options come from `main/Kconfig.projbuild`.

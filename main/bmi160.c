@@ -19,6 +19,7 @@ static const char *TAG = "bmi160";
 #define REG_ERR          0x02
 #define REG_PMU_STATUS   0x03
 #define REG_GYR_X_L      0x0C
+#define REG_INT_STATUS0  0x1C
 #define REG_FIFO_LENGTH  0x22
 #define REG_FIFO_DATA    0x24
 #define REG_ACC_CONF     0x40
@@ -26,6 +27,11 @@ static const char *TAG = "bmi160";
 #define REG_GYR_CONF     0x42
 #define REG_GYR_RANGE    0x43
 #define REG_FIFO_CONFIG1 0x47
+#define REG_INT_EN0      0x50
+#define REG_INT_LATCH    0x54
+#define REG_INT_MAP0     0x55
+#define REG_INT_TAP0     0x63
+#define REG_INT_TAP1     0x64
 #define REG_CMD          0x7E
 /* Any read switches the chip to SPI; this one has no side effects. */
 #define REG_SPI_SELECT   0x7F
@@ -38,6 +44,7 @@ static const char *TAG = "bmi160";
 #define CMD_ACC_NORMAL  0x11
 #define CMD_GYR_NORMAL  0x15
 #define CMD_FIFO_FLUSH  0xB0
+#define CMD_INT_RESET   0xB1 /* clears latched interrupts */
 #define PMU_BOTH_NORMAL 0x14 /* acc_pmu_status and gyr_pmu_status both normal */
 
 /* ODR 9: 100 * 2^(9 - 8) = 200 Hz. BWP 2: normal filter mode, so a 3 dB
@@ -48,6 +55,17 @@ static const char *TAG = "bmi160";
 #define GYR_RANGE_1000DPS     0x01
 /* Gyro and accel in the FIFO, no headers: fixed 12-byte frames. */
 #define FIFO_GYR_ACC          0xC0
+
+/* Double-tap engine. A tap is a jump in acceleration (the slope) above
+ * the threshold; the 50 ms after it (shock) belong to the same tap, a tap
+ * only counts after 30 ms of quiet, and the second must come within
+ * 375 ms: INT_TAP_0 quiet 30 ms, shock 50 ms, duration 375 ms. */
+#define TAP_QUIET30_SHOCK50_DUR375 0x05
+/* At ±4 g the threshold counts in steps of 125 mg, up to 31 steps. */
+#define TAP_TH_STEP_MG        125
+#define TAP_TH_MAX            31
+#define INT_D_TAP             0x10 /* INT_EN_0, INT_MAP_0 and INT_STATUS_0 */
+#define INT_LATCHED           0x0F
 
 #define FIFO_SIZE 1024
 
@@ -61,7 +79,9 @@ static vec3_t s_gyro_bias;
 #define SPI_HZ 1000000
 /* Writes need 450 us between them while a sensor is suspended, 2 us once
  * both run. */
-#define WRITE_GAP_US 450
+#define WRITE_GAP_SUSPEND_US 450
+#define WRITE_GAP_NORMAL_US  2
+static uint32_t s_write_gap_us = WRITE_GAP_SUSPEND_US;
 
 static spi_device_handle_t s_spi;
 /* Command byte plus a FIFO's worth of data. */
@@ -105,7 +125,7 @@ static esp_err_t write_reg(uint8_t reg, uint8_t value)
     const uint8_t tx[2] = {reg & 0x7F, value};
     spi_transaction_t t = {.length = 16, .tx_buffer = tx};
     const esp_err_t err = spi_device_polling_transmit(s_spi, &t);
-    esp_rom_delay_us(WRITE_GAP_US);
+    esp_rom_delay_us(s_write_gap_us);
     return err;
 }
 
@@ -174,6 +194,7 @@ esp_err_t bmi160_init(void)
     ESP_RETURN_ON_ERROR(bus_init(), TAG, "bus");
 
     ESP_RETURN_ON_ERROR(select_spi(), TAG, "no answer");
+    s_write_gap_us = WRITE_GAP_SUSPEND_US;
     ESP_RETURN_ON_ERROR(write_reg(REG_CMD, CMD_SOFT_RESET), TAG, "reset");
     vTaskDelay(pdMS_TO_TICKS(10));
     ESP_RETURN_ON_ERROR(select_spi(), TAG, "spi");
@@ -209,6 +230,18 @@ esp_err_t bmi160_init(void)
         ESP_LOGE(TAG, "PMU_STATUS 0x%02X, ERR_REG 0x%02X: sensors did not start", pmu, err);
         return ESP_FAIL;
     }
+    s_write_gap_us = WRITE_GAP_NORMAL_US;
+
+    int tap_th = (CONFIG_CUBE_TAP_THRESHOLD_MG + TAP_TH_STEP_MG / 2) / TAP_TH_STEP_MG;
+    tap_th = tap_th < 1 ? 1 : tap_th > TAP_TH_MAX ? TAP_TH_MAX : tap_th;
+    ESP_RETURN_ON_ERROR(write_reg(REG_INT_TAP0, TAP_QUIET30_SHOCK50_DUR375), TAG, "tap0");
+    ESP_RETURN_ON_ERROR(write_reg(REG_INT_TAP1, (uint8_t)tap_th), TAG, "tap1");
+    /* Latched, so a double tap waits in INT_STATUS_0 until it is read. It
+     * is mapped to INT1, whose output stays off: the pin is not wired. */
+    ESP_RETURN_ON_ERROR(write_reg(REG_INT_LATCH, INT_LATCHED), TAG, "latch");
+    ESP_RETURN_ON_ERROR(write_reg(REG_INT_MAP0, INT_D_TAP), TAG, "int map");
+    ESP_RETURN_ON_ERROR(write_reg(REG_INT_EN0, INT_D_TAP), TAG, "int en");
+    ESP_RETURN_ON_ERROR(write_reg(REG_CMD, CMD_INT_RESET), TAG, "int reset");
 
     vec3_t sum = v3(0.0f, 0.0f, 0.0f);
     imu_sample_t s;
@@ -223,6 +256,16 @@ esp_err_t bmi160_init(void)
 
     ESP_RETURN_ON_ERROR(write_reg(REG_FIFO_CONFIG1, FIFO_GYR_ACC), TAG, "fifo config");
     return fifo_flush();
+}
+
+bool bmi160_double_tap(void)
+{
+    uint8_t status;
+    if (read_regs(REG_INT_STATUS0, &status, 1) != ESP_OK || !(status & INT_D_TAP)) {
+        return false;
+    }
+    write_reg(REG_CMD, CMD_INT_RESET);
+    return true;
 }
 
 int bmi160_read(imu_sample_t *out, int max)

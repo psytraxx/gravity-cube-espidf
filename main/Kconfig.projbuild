@@ -31,11 +31,11 @@ config CUBE_PANEL_TEST
 config CUBE_TAP_THRESHOLD_MG
     int "Tap threshold (mg)"
     default 1000
-    range 300 4000
+    range 125 3875
     help
-        Jump in acceleration between two samples (5 ms apart) that counts
-        as a tap. Raise it if sloshing the fluid changes its colour, lower
-        it if double taps are missed.
+        Jump in acceleration that the BMI160's tap engine counts as a tap,
+        in steps of 125 mg. Raise it if sloshing the fluid changes its
+        colour, lower it if double taps are missed.
 
 config CUBE_IMU_SPI_MOSI
     int "SPI MOSI GPIO (board SDA)"

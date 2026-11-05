@@ -21,7 +21,6 @@
 #include "ota.h"
 #include "panel.h"
 #include "sdkconfig.h"
-#include "tap.h"
 #include "ws2812.h"
 
 static const char *TAG = "cube";
@@ -112,8 +111,6 @@ void app_main(void)
     ESP_LOGI(TAG, "%d fluid particles; double-tap the cube to change colour", FLUID_PARTICLES);
     uint32_t hue = FLUID_HUE;
 
-    tap_detector_t taps;
-    tap_init(&taps, CONFIG_CUBE_TAP_THRESHOLD_MG / 1000.0f);
     motion_filter_t motion;
     motion_filter_init(&motion, MOTION_SMOOTHING, MOTION_GAIN);
 
@@ -122,14 +119,18 @@ void app_main(void)
     /* No IMU (or no new sample): gravity towards z == 0. */
     vec3_t accel = v3(0.0f, 0.0f, -1.0f);
     vec3_t gyro_rate = v3(0.0f, 0.0f, 0.0f);
-    int64_t sample_ms = 0;
     uint32_t loops = 0;
     TickType_t wake = xTaskGetTickCount();
 
     for (;;) {
-        /* Every sample since the last frame: each one goes through the tap
-         * detector, the gyro is integrated over all of them, and their
-         * mean is this frame's acceleration. */
+        if (have_imu && bmi160_double_tap()) {
+            /* At least 60 degrees from the last hue, so the change shows. */
+            hue = (hue + 60 + esp_random() % 241) % 360;
+            ESP_LOGI(TAG, "Double tap: hue %lu", (unsigned long)hue);
+        }
+
+        /* Every sample since the last frame: the gyro is integrated over
+         * all of them, and their mean is this frame's acceleration. */
         vec3_t rotation = v3(0.0f, 0.0f, 0.0f);
         const int n = have_imu ? bmi160_read(samples, MAX_SAMPLES) : 0;
         if (n < 0) {
@@ -138,12 +139,6 @@ void app_main(void)
         if (n > 0) {
             vec3_t sum = v3(0.0f, 0.0f, 0.0f);
             for (int i = 0; i < n; i++) {
-                sample_ms += BMI160_SAMPLE_MS;
-                if (tap_feed(&taps, samples[i].accel, sample_ms)) {
-                    /* At least 60 degrees from the last hue, so the change shows. */
-                    hue = (hue + 60 + esp_random() % 241) % 360;
-                    ESP_LOGI(TAG, "Double tap: hue %lu", (unsigned long)hue);
-                }
                 sum = v3_add(sum, samples[i].accel);
                 rotation = v3_add(rotation, v3_scale(samples[i].gyro, BMI160_SAMPLE_MS / 1000.0f));
             }
