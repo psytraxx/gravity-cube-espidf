@@ -209,6 +209,21 @@ outflow, so the fluid keeps its volume. A voxel lights once the particle
 density at its centre reaches 1.2 and goes dark below 0.4, so a settled
 surface does not flicker. A step takes ~17 ms on the ESP32-S3.
 
+## Enclosure
+
+[`case/`](case/) holds the Voxel Shell enclosure: six mitred, translucent
+face shells with a funnel light grid and a diffuser skin, and the USB-C
+socket and slide switch on the bottom front edge.
+
+- [`case/voxel-shell-65x65/`](case/voxel-shell-65x65/README.md) is for the
+  rigid 65 x 66 mm panels; it also holds `generate.py`, which builds every
+  STL, and `check_fit.py`.
+- [`case/voxel-shell-80x80/`](case/voxel-shell-80x80/README.md) is for the
+  flexible 80 x 80 mm panels.
+
+`.github/workflows/pages.yml` publishes `case/` to GitHub Pages, with 3D
+viewers at <https://psytraxx.github.io/gravity-cube-espidf/>.
+
 ## Code layout
 
 | Path | |
@@ -219,6 +234,7 @@ surface does not flicker. A step takes ~17 ms on the ESP32-S3.
 | `main/ws2812.c` | WS2812 chain through the `espressif/led_strip` component (RMT) |
 | `main/core/` | Everything that needs no hardware: fluid, colours, motion filter, tap detector, panel map, IMU sample decoding |
 | `test/host/` | Unity tests for `main/core`, run on the host |
+| `case/` | Enclosure: generator, STLs and 3D viewers |
 
 ## Tests
 
