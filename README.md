@@ -5,7 +5,7 @@ tilted. Tilt it and the fluid flows downhill; shake it and the fluid
 sloshes; spin it and the fluid swirls against the spin and out to the
 walls. A double tap gives the fluid a new, random colour.
 
-It runs on an ESP32-S3 (ESP32-S3 SuperMini) with an MPU-6500 IMU and
+It runs on an ESP32-S3 (ESP32-S3 SuperMini) with a BMI160 IMU and
 six 8x8 WS2812 panels, and is written in C for ESP-IDF 6.1. The physics is
 a port of the fluid solver in
 [gravity-cube-rs](https://github.com/psytraxx/gravity-cube-rs).
@@ -15,7 +15,7 @@ a port of the fluid solver in
 | Part | Notes |
 |---|---|
 | ESP32-S3 SuperMini | ESP32-S3FH4R2: 4 MB flash, 2 MB PSRAM (not used) |
-| MPU-6500 breakout | 3–5 V supply (on-board LDO), wired for SPI |
+| BMI160 breakout | 12-pin board (VIN, 3V3, GND, SCL, SDA, CS, SA0, …), wired for SPI |
 | 6 × 8x8 WS2812B panels | 384 LEDs in one chain |
 | 330 Ω resistor | In series with the data line, at the first panel |
 | 1500 µF capacitor | Across 5 V and GND at the first panel (10 V or more), against the inrush when the LEDs switch |
@@ -56,23 +56,29 @@ flowchart LR
 The per-panel rotation and mirroring is in
 [`main/core/panel.c`](main/core/panel.c).
 
-### MPU-6500 (SPI)
+### BMI160 (SPI)
 
 The IMU uses GPIO 10–13, the ESP32-S3's SPI2 IOMUX pins, all on the
 SuperMini's header:
 
-| MPU-6500 board | SuperMini |
+| BMI160 board | SuperMini |
 |---|---|
-| VCC | 3V3 |
+| 3V3 | 3V3 |
 | GND | GND |
-| SCL (SCLK) | GPIO 12 (SPI_CLK) |
+| SCL (SCK) | GPIO 12 (SPI_CLK) |
 | SDA (SDI / MOSI) | GPIO 11 (SPI_D) |
-| AD0 (SDO / MISO) | GPIO 13 (SPI_Q) |
-| NCS | GPIO 10 (SPI_CS) |
+| SA0 (SDO / MISO) | GPIO 13 (SPI_Q) |
+| CS (CSB) | GPIO 10 (SPI_CS) |
 
-SPI runs at 1 MHz, against 400 kHz for the board's I2C interface, so a
-frame's FIFO read takes a fraction of the time. The pins are settable in
+VIN (into the board's regulator), INT1, INT2 and the auxiliary pins
+(OCS, SCX, SDX) stay unconnected. The chip starts on I2C; the first
+rising edge on CS switches it to SPI until it is power cycled. SPI runs
+at 1 MHz (the chip takes up to 10 MHz). The pins are settable in
 menuconfig.
+
+The same 12-pin board is also sold with an ST LSM6DS3 on it, and the
+silkscreen does not always say which: the firmware logs `this is an ST
+LSM6DS3-family chip` if it finds one, and does not drive it.
 
 ### INMP441 microphone (I2S)
 
@@ -93,7 +99,7 @@ clear of the strapping pins.
 
 The IMU board lies flat on the top face with its Z axis pointing up and
 its X axis along the cube's x axis. Mounted any other way, edit
-`MPU6500_AXIS_MAP` in [`main/core/mpu6500_decode.h`](main/core/mpu6500_decode.h):
+`BMI160_AXIS_MAP` in [`main/core/bmi160_decode.h`](main/core/bmi160_decode.h):
 if tilting moves the fluid the wrong way on an axis, flip that axis' sign.
 
 ## Build and flash
@@ -180,7 +186,7 @@ Without a token, anyone on the network can reflash the cube.
 | Physics step period | 18 ms | The physics constants are per step; a fluid step takes ~17 ms, so 18 ms (55 fps) is the shortest it keeps up with |
 | Tap threshold | 1000 mg | Raise it if sloshing changes the colour, lower it if taps are missed |
 | IMU SPI pins | 11, 13, 12, 10 | MOSI, MISO, SCLK, CS |
-| I2C scan at startup | off | Wiring check: probes the IMU pins as I2C; finds the MPU-6500 at 0x68/0x69 after a power on |
+| I2C scan at startup | off | Wiring check: probes the IMU pins as I2C; finds the BMI160 at 0x68/0x69 after a power on |
 | Wi-Fi SSID, password | empty | Network for updates over Wi-Fi; an empty SSID turns Wi-Fi off |
 | Hostname | cube | Answers at `http://cube.local/` |
 | Update token | empty | Updates need `Authorization: Bearer <token>`; empty lets anyone on the network update |
@@ -191,7 +197,7 @@ The particle count and colour are in [`main/core/config.h`](main/core/config.h).
 
 ```mermaid
 flowchart LR
-    IMU[MPU-6500 FIFO<br/>250 Hz] --> TAP[tap detector]
+    IMU[BMI160 FIFO<br/>200 Hz] --> TAP[tap detector]
     IMU --> MF[motion filter]
     TAP -->|double tap: random hue| FB
     MF -->|gravity + amplified motion| FX[fluid step]
@@ -207,8 +213,8 @@ component over RMT (~11.5 ms for 384 LEDs); the two overlap, and core 0 only wai
 is still sending. Unchanged frames are not re-sent, so a settled cube
 keeps the data line quiet.
 
-**IMU.** The MPU-6500 samples accelerometer (±4 g) and gyro (±1000 °/s)
-at 250 Hz into its FIFO. Each frame uses the mean acceleration and the
+**IMU.** The BMI160 samples accelerometer (±4 g) and gyro (±1000 °/s)
+at 200 Hz into its FIFO, in headerless 12-byte frames. Each frame uses the mean acceleration and the
 gyro integrated over all samples since the last frame.
 
 **Motion filter.** A complementary filter tracks gravity: the gyro turns
@@ -217,8 +223,8 @@ Whatever acceleration is left over is the cube's own motion, and is
 tripled before reaching the fluid, so shaking sloshes it but tilting does
 not overshoot.
 
-**Double tap.** The MPU-6500 has no tap engine outside its DMP, so taps
-are found in software on the raw samples: a jump of more than the
+**Double tap.** Taps are found in software on the FIFO samples, the way
+the BMI160's own tap engine works, so the detector is tested on the host: a jump of more than the
 threshold between two samples, after at least 30 ms of stillness, counts
 as a tap; a second tap within 375 ms picks a random hue at least 60°
 from the current one. Shaking never has the stillness, so it does not
@@ -243,7 +249,7 @@ surface does not flicker. A step takes ~17 ms on the ESP32-S3.
 |---|---|
 | `main/main.c` | Main loop on core 0, LED task on core 1 |
 | `main/ota.c` | Wi-Fi, mDNS and the update server on core 1; keeps or rolls back a new image |
-| `main/mpu6500.c` | MPU-6500 over SPI: setup, gyro calibration, FIFO reads |
+| `main/bmi160.c` | BMI160 over SPI: setup, gyro calibration, FIFO reads |
 | `main/ws2812.c` | WS2812 chain through the `espressif/led_strip` component (RMT) |
 | `main/core/` | Everything that needs no hardware: fluid, colours, motion filter, tap detector, panel map, IMU sample decoding |
 | `test/host/` | Unity tests for `main/core`, run on the host |

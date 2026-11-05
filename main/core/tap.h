@@ -1,7 +1,7 @@
 /* Double-tap detection on raw accelerometer samples.
  *
- * The MPU-6500 has no tap engine outside its DMP, so taps are found here,
- * the way the BMI160's engine finds them: a tap is a jump in acceleration
+ * Taps are found here, on the FIFO samples, the way the BMI160's own tap
+ * engine finds them, so the detector runs and is tested on the host: a tap is a jump in acceleration
  * between consecutive samples (the slope) above a threshold. The samples
  * that follow within the shock time belong to the same tap. A tap only
  * counts after a quiet time with no jump at all, so shaking the cube does

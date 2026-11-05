@@ -33,16 +33,16 @@ config CUBE_TAP_THRESHOLD_MG
     default 1000
     range 300 4000
     help
-        Jump in acceleration between two samples (4 ms apart) that counts
+        Jump in acceleration between two samples (5 ms apart) that counts
         as a tap. Raise it if sloshing the fluid changes its colour, lower
         it if double taps are missed.
 
 config CUBE_IMU_SPI_MOSI
-    int "SPI MOSI GPIO (board SDA/SDI)"
+    int "SPI MOSI GPIO (board SDA)"
     default 11
 
 config CUBE_IMU_SPI_MISO
-    int "SPI MISO GPIO (board AD0/SDO)"
+    int "SPI MISO GPIO (board SA0)"
     default 13
 
 config CUBE_IMU_SPI_SCLK
@@ -50,19 +50,19 @@ config CUBE_IMU_SPI_SCLK
     default 12
 
 config CUBE_IMU_SPI_CS
-    int "SPI CS GPIO (board NCS)"
+    int "SPI CS GPIO (board CS)"
     default 10
 
 config CUBE_IMU_I2C_SCAN
     bool "Scan for I2C devices on the IMU pins at startup"
     default n
     help
-        Wiring check: before setting up SPI, hold NCS high (which puts the
-        MPU-6500 on I2C) and probe every address with SCL on the SCLK pin
-        and SDA on the MOSI pin. An MPU-6500 answers at 0x68 (AD0 low) or
-        0x69 (AD0 high). The SPI setup turns the chip's I2C interface off
-        until it is power cycled, so the scan only finds it after a power
-        on, not after a reset.
+        Wiring check: before setting up SPI, hold CS high (which keeps the
+        BMI160 on I2C) and probe every address with SCL on the SCLK pin
+        and SDA on the MOSI pin. A BMI160 answers at 0x68 (SA0 low) or
+        0x69 (SA0 high). The SPI setup switches the chip to SPI until it
+        is power cycled, so the scan only finds it after a power on, not
+        after a reset.
 
 menu "Wi-Fi and firmware updates"
 
