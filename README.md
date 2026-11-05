@@ -184,7 +184,7 @@ Without a token, anyone on the network can reflash the cube.
 | LED data GPIO | 2 | |
 | Panel test at power on | on | Each panel fills green LED by LED, in chain order (~5 s) |
 | Physics step period | 18 ms | The physics constants are per step; a fluid step takes ~17 ms, so 18 ms (55 fps) is the shortest it keeps up with |
-| Tap threshold | 1000 mg | Raise it if sloshing changes the colour, lower it if taps are missed |
+| Tap threshold | 1000 mg | In 125 mg steps. Raise it if sloshing changes the colour, lower it if taps are missed |
 | IMU SPI pins | 11, 13, 12, 10 | MOSI, MISO, SCLK, CS |
 | I2C scan at startup | off | Wiring check: probes the IMU pins as I2C; finds the BMI160 at 0x68/0x69 after a power on |
 | Wi-Fi SSID, password | empty | Network for updates over Wi-Fi; an empty SSID turns Wi-Fi off |
@@ -197,9 +197,8 @@ The particle count and colour are in [`main/core/config.h`](main/core/config.h).
 
 ```mermaid
 flowchart LR
-    IMU[BMI160 FIFO<br/>200 Hz] --> TAP[tap detector]
-    IMU --> MF[motion filter]
-    TAP -->|double tap: random hue| FB
+    IMU[BMI160 FIFO<br/>200 Hz] --> MF[motion filter]
+    TAP[BMI160 tap engine] -->|double tap: random hue| FB
     MF -->|gravity + amplified motion| FX[fluid step]
     IMU -->|gyro, integrated| FX
     FX --> FB[frame builder]
@@ -223,11 +222,12 @@ Whatever acceleration is left over is the cube's own motion, and is
 tripled before reaching the fluid, so shaking sloshes it but tilting does
 not overshoot.
 
-**Double tap.** Taps are found in software on the FIFO samples, the way
-the BMI160's own tap engine works, so the detector is tested on the host: a jump of more than the
-threshold between two samples, after at least 30 ms of stillness, counts
-as a tap; a second tap within 375 ms picks a random hue at least 60°
-from the current one. Shaking never has the stillness, so it does not
+**Double tap.** The BMI160's tap engine finds them: a jump in
+acceleration above the threshold, after at least 30 ms of stillness,
+counts as a tap, and the 50 ms after it belong to the same tap; a second
+tap within 375 ms latches a double tap, which the main loop picks up once
+a frame and answers with a random hue at least 60° from the current
+one. Shaking never has the stillness, so it does not
 change the colour. Every hue's channels add up to 60/255, so the cube
 draws the same current in any colour.
 
@@ -251,7 +251,7 @@ surface does not flicker. A step takes ~17 ms on the ESP32-S3.
 | `main/ota.c` | Wi-Fi, mDNS and the update server on core 1; keeps or rolls back a new image |
 | `main/bmi160.c` | BMI160 over SPI: setup, gyro calibration, FIFO reads |
 | `main/ws2812.c` | WS2812 chain through the `espressif/led_strip` component (RMT) |
-| `main/core/` | Everything that needs no hardware: fluid, colours, motion filter, tap detector, panel map, IMU sample decoding |
+| `main/core/` | Everything that needs no hardware: fluid, colours, motion filter, panel map, IMU sample decoding |
 | `test/host/` | Unity tests for `main/core`, run on the host |
 
 ## Tests
