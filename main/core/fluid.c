@@ -1,5 +1,6 @@
 #include "fluid.h"
 
+#include <math.h>
 #include <string.h>
 
 #define N CUBE_SIZE
@@ -421,9 +422,20 @@ void fluid_set_rotation(fluid_t *f, vec3_t rotation)
     f->rotation = rotation;
 }
 
+void fluid_set_lift(fluid_t *f, const float lift[N * N])
+{
+    memcpy(f->lift, lift, sizeof f->lift);
+}
+
 void fluid_step(fluid_t *f, vec3_t accel)
 {
     const vec3_t gravity = v3_scale(accel, GRAVITY);
+    /* Columns for the lift run along the axis gravity mostly points along;
+     * u and v are the other two. */
+    const float gx = fabsf(accel.x), gy = fabsf(accel.y), gz = fabsf(accel.z);
+    const int up_axis = gx >= gy && gx >= gz ? 0 : gy >= gz ? 1 : 2;
+    const int u_axis = up_axis == 0 ? 1 : 0, v_axis = up_axis == 2 ? 1 : 2;
+    const float up = (axis(accel, up_axis) > 0.0f ? -1.0f : 1.0f) * GRAVITY;
     const vec3_t center = v3(N / 2.0f, N / 2.0f, N / 2.0f);
     /* In the turning cube the fluid feels the Euler force (the spin
      * speeding up), Coriolis and centrifugal forces. */
@@ -438,6 +450,8 @@ void fluid_step(fluid_t *f, vec3_t accel)
         a = v3_sub(a, v3_cross(spin_up, r));
         a = v3_sub(a, v3_scale(v3_cross(spin, p->vel), 2.0f));
         a = v3_sub(a, v3_cross(spin, v3_cross(spin, r)));
+        const int column = cell_of(axis(p->pos, u_axis)) + N * cell_of(axis(p->pos, v_axis));
+        set_axis(&a, up_axis, axis(a, up_axis) + up * f->lift[column]);
         p->vel = v3_add(p->vel, a);
     }
 

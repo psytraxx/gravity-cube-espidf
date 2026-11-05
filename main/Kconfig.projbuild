@@ -122,6 +122,20 @@ config CUBE_OTA_TOKEN
         "Authorization: Bearer <token>". Empty lets anyone on the network
         update the cube.
 
+config CUBE_AUDIO_SYNC
+    bool "Dance to WLED audio sync"
+    default y
+    help
+        Listen for WLED AudioReactive sync packets (V2) on the Wi-Fi
+        network, as sent by a WLED audio sync server, and make the fluid
+        dance to the music. Turns Wi-Fi power saving off.
+
+config CUBE_AUDIO_PORT
+    int "Audio sync UDP port"
+    default 11988
+    help
+        WLED's default audio sync port.
+
 endmenu
 
 endmenu

@@ -3,7 +3,9 @@
 Firmware for an 8x8x8 LED cube whose particles fall the way the cube is
 tilted. Tilt it and the fluid flows downhill; shake it and the fluid
 sloshes; spin it and the fluid swirls against the spin and out to the
-walls. A double tap gives the fluid a new, random colour.
+walls. A double tap gives the fluid a new, random colour. Play music
+through a [WLED audio sync](https://github.com/psytraxx/wled-audio-server-rs)
+sender and the fluid dances to it.
 
 It runs on an ESP32-S3 (ESP32-S3 SuperMini) with a BMI160 IMU and
 six 8x8 WS2812 panels, and is written in C for ESP-IDF 6.1. The physics is
@@ -186,6 +188,30 @@ few seconds an update takes.
 
 Without a token, anyone on the network can reflash the cube.
 
+## Music
+
+The cube listens for WLED AudioReactive sync packets (V2, UDP port 11988)
+on its Wi-Fi network, as sent by
+[wled-audio-server-rs](https://github.com/psytraxx/wled-audio-server-rs)
+or a WLED with a microphone. Start the sender on the same network and the
+fluid starts dancing within a second; a second after the packets stop, it
+is back to normal.
+
+- **Fountains.** The face gravity points at is split into a 4x4 grid of
+  2x2 columns, one per frequency band: bass in the middle four, the
+  middle frequencies round the edges, treble in the corners. Each band
+  lifts the fluid in its column, so the surface moves like a spectrum
+  analyser made of water. The lift averages zero, so the fountains move
+  fluid about rather than lifting it all.
+- **Beats.** Each beat throws the fluid off the floor for one step, from
+  0.6 g with no bass to 2 g at full bass, at most once every 150 ms.
+- **Light.** Between beats the fluid glows at 35 %; each beat flashes it
+  to full brightness.
+
+Tilting, shaking and double taps work as before. Listening turns Wi-Fi
+power saving off: with it on, broadcast packets wait for the next beacon
+(~100 ms) and the beats arrive late.
+
 ## Settings
 
 `idf.py menuconfig` → *Gravity cube*:
@@ -203,6 +229,8 @@ Without a token, anyone on the network can reflash the cube.
 | Wi-Fi SSID, password | empty | Network for updates over Wi-Fi; an empty SSID turns Wi-Fi off |
 | Hostname | cube | Answers at `http://cube.local/` |
 | Update token | empty | Updates need `Authorization: Bearer <token>`; empty lets anyone on the network update |
+| Dance to WLED audio sync | on | Listen for music over Wi-Fi; turns Wi-Fi power saving off |
+| Audio sync UDP port | 11988 | WLED's default |
 
 The particle count and colour are in [`main/core/config.h`](main/core/config.h).
 
@@ -214,6 +242,9 @@ flowchart LR
     TAP[BMI160 tap engine] -->|double tap: random hue| FB
     MF -->|gravity + amplified motion| FX[fluid step]
     IMU -->|gyro, integrated| FX
+    UDP[WLED audio sync<br/>UDP, core 1] --> AR[dance]
+    AR -->|fountains, beat throw| FX
+    AR -->|beat flash| FB
     FX --> FB[frame builder]
     FB -->|queue| LED[LED task<br/>core 1, led_strip]
 ```
@@ -278,9 +309,10 @@ viewers at <https://psytraxx.github.io/gravity-cube-espidf/>.
 |---|---|
 | `main/main.c` | Main loop on core 0, LED task on core 1 |
 | `main/ota.c` | Wi-Fi, mDNS and the update server on core 1; keeps or rolls back a new image |
+| `main/audio_sync.c` | Receives WLED audio sync packets on core 1 |
 | `main/bmi160.c` | BMI160 over SPI: setup, gyro calibration, FIFO reads |
 | `main/ws2812.c` | WS2812 chain through the `espressif/led_strip` component (RMT) |
-| `main/core/` | Everything that needs no hardware: fluid, colours, motion filter, panel map, IMU sample decoding |
+| `main/core/` | Everything that needs no hardware: fluid, colours, motion filter, panel map, IMU sample decoding, audio sync decoding and the fluid's dance |
 | `test/host/` | Unity tests for `main/core`, run on the host |
 | `case/` | Enclosure: generator, STLs and 3D viewers |
 

@@ -201,6 +201,39 @@ static void test_tint_varies_across_fluid_and_with_speed(void)
     TEST_ASSERT_GREATER_THAN_FLOAT(still + 5.0f, fluid_tint(&f, (cell_t){3, 3, 1}));
 }
 
+/* Lift on the middle columns, balanced by a little sink everywhere else
+ * as the music's lift is, raises the surface there above the rest,
+ * whichever way gravity points. */
+static void test_lift_raises_columns(void)
+{
+    float lift[N * N];
+    for (int v = 0; v < N; v++) {
+        for (int u = 0; u < N; u++) {
+            lift[u + N * v] = u >= 2 && u < 6 && v >= 2 && v < 6 ? 0.6f : -0.2f;
+        }
+    }
+    fluid_set_lift(&f, lift);
+    run(80, DOWN);
+    int middle = 0, edge = 0;
+    for (uint8_t z = 0; z < N; z++) {
+        middle += fluid_lit(&f, (cell_t){3, 4, z});
+        edge += fluid_lit(&f, (cell_t){0, 0, z});
+    }
+    TEST_ASSERT_GREATER_THAN_INT(edge + 1, middle);
+
+    /* Gravity along +x: columns run along x, lifted towards x == 0. */
+    fluid_init(&f);
+    fluid_populate(&f, FLUID_PARTICLES);
+    fluid_set_lift(&f, lift);
+    run(300, (vec3_t){1.0f, 0.0f, 0.0f});
+    middle = edge = 0;
+    for (uint8_t x = 0; x < N; x++) {
+        middle += fluid_lit(&f, (cell_t){x, 3, 4});
+        edge += fluid_lit(&f, (cell_t){x, 0, 0});
+    }
+    TEST_ASSERT_GREATER_THAN_INT(edge + 1, middle);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -211,5 +244,6 @@ int main(void)
     RUN_TEST(test_pressure_solve_removes_divergence);
     RUN_TEST(test_spin_lags_and_flings_outwards);
     RUN_TEST(test_tint_varies_across_fluid_and_with_speed);
+    RUN_TEST(test_lift_raises_columns);
     return UNITY_END();
 }

@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include "audio_sync.h"
 #include "esp_app_desc.h"
 #include "esp_event.h"
 #include "esp_http_server.h"
@@ -213,6 +214,9 @@ static void net_task(void *arg)
         wifi_init();
         mdns_init_cube();
         server_start();
+#if CONFIG_CUBE_AUDIO_SYNC
+        audio_sync_start();
+#endif
     } else {
         ESP_LOGW(TAG, "No Wi-Fi SSID set: no updates over Wi-Fi");
     }

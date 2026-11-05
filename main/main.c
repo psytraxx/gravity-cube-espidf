@@ -8,6 +8,8 @@
  * and firmware updates run on core 1 too (ota.c). */
 #include <math.h>
 
+#include "audio.h"
+#include "audio_sync.h"
 #include "color.h"
 #include "esp_log.h"
 #include "esp_random.h"
@@ -117,6 +119,11 @@ void app_main(void)
     ESP_LOGI(TAG, "%d fluid particles; double-tap the cube to change colour", FLUID_PARTICLES);
     uint32_t hue = FLUID_HUE;
 
+    audio_react_t audio;
+    audio_react_init(&audio);
+    float lift[CUBE_SIZE * CUBE_SIZE];
+    bool dancing = false;
+
     motion_filter_t motion;
     motion_filter_init(&motion, MOTION_SMOOTHING, MOTION_GAIN);
 
@@ -152,10 +159,28 @@ void app_main(void)
             gyro_rate = samples[n - 1].gyro;
         }
 
+        /* Music: fountains per band, and a throw off the floor on a beat. */
+        audio_frame_t sound;
+        audio_react_step(&audio, audio_sync_take(&sound) ? &sound : NULL);
+        if ((audio.presence > 0.0f) != dancing) {
+            dancing = !dancing;
+            ESP_LOGI(TAG, "%s", dancing ? "Music: dancing" : "Music stopped");
+        }
+        audio_react_lift(&audio, lift);
+
         const int64_t start = esp_timer_get_time();
+        vec3_t fall = motion_filter_apply(&motion, accel, rotation);
+        if (audio.kick > 0.0f) {
+            const float g = v3_len(motion.gravity);
+            if (g > 0.1f) {
+                fall = v3_sub(fall, v3_scale(motion.gravity, audio.kick / g));
+            }
+        }
         fluid_set_rotation(&fluid, rotation);
-        fluid_step(&fluid, motion_filter_apply(&motion, accel, rotation));
+        fluid_set_lift(&fluid, lift);
+        fluid_step(&fluid, fall);
         const int64_t physics_us = esp_timer_get_time() - start;
+        const float brightness = audio_react_brightness(&audio);
 
         frame_clear(&frame);
         for (uint8_t z = 0; z < CUBE_SIZE; z++) {
@@ -164,7 +189,8 @@ void app_main(void)
                     const cell_t c = {x, y, z};
                     if (fluid_lit(&fluid, c)) {
                         const int tint = (int)lrintf(fluid_tint(&fluid, c));
-                        frame_set(&frame, c, color_from_hue((uint32_t)((int)hue + 360 + tint)));
+                        const color_t color = color_from_hue((uint32_t)((int)hue + 360 + tint));
+                        frame_set(&frame, c, color_dim(color, brightness));
                     }
                 }
             }
