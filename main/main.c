@@ -17,7 +17,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include "motion.h"
-#include "mpu6500.h"
+#include "bmi160.h"
 #include "ota.h"
 #include "panel.h"
 #include "sdkconfig.h"
@@ -100,9 +100,9 @@ void app_main(void)
 #endif
 
     /* Calibrates the gyro, so the cube should be still. */
-    const bool have_imu = mpu6500_init() == ESP_OK;
+    const bool have_imu = bmi160_init() == ESP_OK;
     if (!have_imu) {
-        ESP_LOGW(TAG, "No MPU-6500: check the wiring (README.md#wiring). "
+        ESP_LOGW(TAG, "No BMI160: check the wiring (README.md#wiring). "
                       "Running with gravity towards z == 0, no spin or taps.");
     }
 
@@ -131,21 +131,21 @@ void app_main(void)
          * detector, the gyro is integrated over all of them, and their
          * mean is this frame's acceleration. */
         vec3_t rotation = v3(0.0f, 0.0f, 0.0f);
-        const int n = have_imu ? mpu6500_read(samples, MAX_SAMPLES) : 0;
+        const int n = have_imu ? bmi160_read(samples, MAX_SAMPLES) : 0;
         if (n < 0) {
             ESP_LOGW(TAG, "IMU read failed");
         }
         if (n > 0) {
             vec3_t sum = v3(0.0f, 0.0f, 0.0f);
             for (int i = 0; i < n; i++) {
-                sample_ms += MPU6500_SAMPLE_MS;
+                sample_ms += BMI160_SAMPLE_MS;
                 if (tap_feed(&taps, samples[i].accel, sample_ms)) {
                     /* At least 60 degrees from the last hue, so the change shows. */
                     hue = (hue + 60 + esp_random() % 241) % 360;
                     ESP_LOGI(TAG, "Double tap: hue %lu", (unsigned long)hue);
                 }
                 sum = v3_add(sum, samples[i].accel);
-                rotation = v3_add(rotation, v3_scale(samples[i].gyro, MPU6500_SAMPLE_MS / 1000.0f));
+                rotation = v3_add(rotation, v3_scale(samples[i].gyro, BMI160_SAMPLE_MS / 1000.0f));
             }
             accel = v3_scale(sum, 1.0f / (float)n);
             gyro_rate = samples[n - 1].gyro;

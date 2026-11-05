@@ -1,6 +1,6 @@
 #include <stdbool.h>
 
-#include "mpu6500_decode.h"
+#include "bmi160_decode.h"
 #include "panel.h"
 #include "unity.h"
 
@@ -85,16 +85,16 @@ static void test_frame_set_lights_every_face(void)
 /* At rest, board flat with Z up: +1 g on sensor Z pulls towards cube -Z. */
 static void test_decode_rest_and_spin(void)
 {
-    /* accel (0, 0, +8192) = +1 g on Z; gyro X = +328 = +10 °/s. */
-    const uint8_t raw[MPU6500_SAMPLE_BYTES] = {0, 0, 0, 0, 0x20, 0x00, 0x01, 0x48, 0, 0, 0, 0};
-    const imu_sample_t s = mpu6500_decode(raw);
+    /* gyro X = +328 = +10 °/s; accel (0, 0, +8192) = +1 g on Z. */
+    const uint8_t raw[BMI160_SAMPLE_BYTES] = {0x48, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0x00, 0x20};
+    const imu_sample_t s = bmi160_decode(raw);
     TEST_ASSERT_FLOAT_WITHIN(1e-5f, 0.0f, s.accel.x);
     TEST_ASSERT_FLOAT_WITHIN(1e-5f, -1.0f, s.accel.z);
     TEST_ASSERT_FLOAT_WITHIN(1e-4f, -10.0f * 3.14159265f / 180.0f, s.gyro.x);
     /* Negative values are two's complement; -1 g on sensor X (Right panel
      * down) pulls towards cube +X. */
-    const uint8_t neg[MPU6500_SAMPLE_BYTES] = {0xE0, 0x00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    TEST_ASSERT_FLOAT_WITHIN(1e-5f, 1.0f, mpu6500_decode(neg).accel.x);
+    const uint8_t neg[BMI160_SAMPLE_BYTES] = {0, 0, 0, 0, 0, 0, 0x00, 0xE0, 0, 0, 0, 0};
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, 1.0f, bmi160_decode(neg).accel.x);
 }
 
 /* The one LED frame_set_panel_led lights. */

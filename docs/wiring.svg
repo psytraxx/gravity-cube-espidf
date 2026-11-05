@@ -89,14 +89,14 @@
     <text x="492" y="504">GPIO 7</text>
   </g>
 
-  <!-- MPU-6500 -->
-  <text x="680" y="262" text-anchor="middle" font-weight="bold">MPU-6500 (SPI)</text>
-  <text x="608" y="294">NCS</text>
-  <text x="608" y="319">SDA / MOSI</text>
-  <text x="608" y="344">SCL / SCLK</text>
-  <text x="608" y="369">AD0 / MISO</text>
+  <!-- BMI160 -->
+  <text x="680" y="262" text-anchor="middle" font-weight="bold">BMI160 (SPI)</text>
+  <text x="608" y="294">CS</text>
+  <text x="608" y="319">SDA (SDI)</text>
+  <text x="608" y="344">SCL (SCK)</text>
+  <text x="608" y="369">SA0 (SDO)</text>
   <text x="752" y="369" text-anchor="end">GND</text>
-  <text x="628" y="400">VCC</text>
+  <text x="628" y="400">3V3</text>
 
   <!-- INMP441 -->
   <text x="680" y="550" text-anchor="middle" font-weight="bold">INMP441 (I2S)</text>

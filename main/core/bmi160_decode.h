@@ -1,21 +1,22 @@
-/* MPU-6500 sample decoding: raw FIFO bytes to acceleration and rotation
- * rate in cube axes. */
+/* BMI160 sample decoding: raw FIFO bytes to acceleration and rotation rate
+ * in cube axes. */
 #pragma once
 
 #include <stdint.h>
 
 #include "vec3.h"
 
-/* One FIFO record: accel X, Y, Z then gyro X, Y, Z, each a big-endian
- * int16 (the FIFO keeps register order, and temperature is not stored). */
-#define MPU6500_SAMPLE_BYTES 12
+/* One headerless FIFO frame with gyro and accel enabled: gyro X, Y, Z then
+ * accel X, Y, Z, each a little-endian int16. The data registers from
+ * GYR_X (0x0C) to ACC_Z (0x17) hold the same 12 bytes in the same order. */
+#define BMI160_SAMPLE_BYTES 12
 
 /* ±4 g leaves headroom so shaking the cube does not clip:
  * 32768 / 4 = 8192 LSB per g. */
-#define MPU6500_ACCEL_SCALE (1.0f / 8192.0f)
+#define BMI160_ACCEL_SCALE (1.0f / 8192.0f)
 
 /* ±1000 °/s covers spinning the cube by hand: 32.8 LSB per °/s, as rad/s. */
-#define MPU6500_GYRO_SCALE (3.14159265f / 180.0f / 32.8f)
+#define BMI160_GYRO_SCALE (3.14159265f / 180.0f / 32.8f)
 
 typedef struct {
     vec3_t accel; /* gravity plus motion in g, pointing the way the fluid falls */
@@ -35,8 +36,7 @@ typedef struct {
     int8_t sign;
 } axis_map_t;
 
-static const axis_map_t MPU6500_AXIS_MAP[3] = {{0, -1}, {1, 1}, {2, -1}};
+static const axis_map_t BMI160_AXIS_MAP[3] = {{0, -1}, {1, 1}, {2, -1}};
 
-/* Decode one FIFO record (or the same 12 bytes read from ACCEL_XOUT_H with
- * the 2 temperature bytes removed). */
-imu_sample_t mpu6500_decode(const uint8_t raw[MPU6500_SAMPLE_BYTES]);
+/* Decode one FIFO frame (or the 12 bytes read from GYR_X). */
+imu_sample_t bmi160_decode(const uint8_t raw[BMI160_SAMPLE_BYTES]);

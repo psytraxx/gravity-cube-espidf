@@ -4,8 +4,8 @@
 void setUp(void) {}
 void tearDown(void) {}
 
-/* 250 Hz, as the firmware samples. */
-#define PERIOD_MS 4
+/* 200 Hz, as the firmware samples. */
+#define PERIOD_MS 5
 
 static const vec3_t REST = {0.0f, 0.0f, -1.0f};
 
