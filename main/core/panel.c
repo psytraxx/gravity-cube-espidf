@@ -31,6 +31,13 @@ static const panel_t PANELS[FACE_COUNT] = {
     [FACE_UP] = {.chain = 5, .rotation = 90, .invert_x = false, .invert_y = true},    /* Top */
 };
 
+static panel_wiring_t s_wiring = PANEL_WIRING_ZIGZAG;
+
+void panel_set_wiring(panel_wiring_t wiring)
+{
+    s_wiring = wiring;
+}
+
 static uint16_t led_index(face_t face, uint8_t x, uint8_t y)
 {
     const panel_t *p = &PANELS[face];
@@ -57,11 +64,19 @@ static uint16_t led_index(face_t face, uint8_t x, uint8_t y)
     if (p->invert_y) {
         py = LAST - py;
     }
-    /* Zigzag: odd rows run backwards. */
-    if (py & 1) {
-        px = LAST - px;
+    /* px runs along the zigzag's lines, py across them. */
+    uint16_t i;
+    if (s_wiring == PANEL_WIRING_ROWS) {
+        /* Lines along py, all the same way. */
+        i = (uint16_t)(py + px * N);
+    } else {
+        /* Lines along px, every other one backwards. */
+        if (py & 1) {
+            px = LAST - px;
+        }
+        i = (uint16_t)(px + py * N);
     }
-    return (uint16_t)(p->chain * N * N + px + py * N);
+    return (uint16_t)(p->chain * N * N + i);
 }
 
 int panel_leds(cell_t c, uint16_t leds[3])

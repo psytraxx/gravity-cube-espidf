@@ -4,7 +4,10 @@
 #include "panel.h"
 #include "unity.h"
 
-void setUp(void) {}
+void setUp(void)
+{
+    panel_set_wiring(PANEL_WIRING_ZIGZAG);
+}
 void tearDown(void) {}
 
 static bool lights(uint8_t x, uint8_t y, uint8_t z, uint16_t led)
@@ -19,7 +22,7 @@ static bool lights(uint8_t x, uint8_t y, uint8_t z, uint16_t led)
     return false;
 }
 
-static void test_every_led_is_hit_exactly_once(void)
+static void check_every_led_is_hit_exactly_once(void)
 {
     uint8_t hits[LED_COUNT] = {0};
     for (uint8_t x = 0; x < 8; x++) {
@@ -37,6 +40,13 @@ static void test_every_led_is_hit_exactly_once(void)
     for (int i = 0; i < LED_COUNT; i++) {
         TEST_ASSERT_EQUAL_UINT8(1, hits[i]);
     }
+}
+
+static void test_every_led_is_hit_exactly_once(void)
+{
+    check_every_led_is_hit_exactly_once();
+    panel_set_wiring(PANEL_WIRING_ROWS);
+    check_every_led_is_hit_exactly_once();
 }
 
 static void test_chain_corners_match_wiring(void)
@@ -58,6 +68,26 @@ static void test_chain_corners_match_wiring(void)
     TEST_ASSERT_TRUE(lights(0, 7, 0, 255));
     TEST_ASSERT_TRUE(lights(0, 7, 0, 0));
     /* Bottom IN (256) is in the Left/Back/Bottom corner. */
+    TEST_ASSERT_TRUE(lights(0, 0, 0, 256));
+}
+
+static void test_rows_chain_corners_match_wiring(void)
+{
+    panel_set_wiring(PANEL_WIRING_ROWS);
+    /* Left IN (0) at the bottom of the Front/Left edge; its bottom row
+     * runs to the Left/Back edge (7), and OUT (63) is at the top of it. */
+    TEST_ASSERT_TRUE(lights(0, 7, 0, 0));
+    TEST_ASSERT_TRUE(lights(0, 0, 0, 7));
+    TEST_ASSERT_TRUE(lights(0, 7, 1, 8));
+    TEST_ASSERT_TRUE(lights(0, 0, 7, 63));
+    /* Back IN (64) at the bottom of the Left/Back edge, OUT (127) at the
+     * top of the Back/Right edge. */
+    TEST_ASSERT_TRUE(lights(0, 0, 0, 64));
+    TEST_ASSERT_TRUE(lights(1, 0, 0, 65));
+    TEST_ASSERT_TRUE(lights(7, 0, 7, 127));
+    /* Front OUT (255) at the top of the Front/Left edge. */
+    TEST_ASSERT_TRUE(lights(0, 7, 7, 255));
+    /* Bottom IN (256) stays in the Left/Back/Bottom corner. */
     TEST_ASSERT_TRUE(lights(0, 0, 0, 256));
 }
 
@@ -114,7 +144,7 @@ static uint16_t panel_led(int panel, uint8_t col, uint8_t row)
     return (uint16_t)lit;
 }
 
-static void test_panel_led_covers_its_panel(void)
+static void check_panel_led_covers_its_panel(void)
 {
     for (int p = 0; p < PANEL_COUNT; p++) {
         uint8_t hits[PANEL_LEDS] = {0};
@@ -131,7 +161,28 @@ static void test_panel_led_covers_its_panel(void)
     }
 }
 
-static void test_panel_led_is_seen_from_outside(void)
+static void test_panel_led_covers_its_panel(void)
+{
+    check_panel_led_covers_its_panel();
+    panel_set_wiring(PANEL_WIRING_ROWS);
+    check_panel_led_covers_its_panel();
+}
+
+static void test_rows_side_panel_test_fills_in_chain_order(void)
+{
+    /* The panel test, bottom left row by row, walks a side panel's
+     * chain from IN to OUT. */
+    panel_set_wiring(PANEL_WIRING_ROWS);
+    for (int p = 0; p < 4; p++) {
+        for (uint8_t row = 0; row < 8; row++) {
+            for (uint8_t col = 0; col < 8; col++) {
+                TEST_ASSERT_EQUAL_UINT16(p * PANEL_LEDS + row * 8 + col, panel_led(p, col, row));
+            }
+        }
+    }
+}
+
+static void check_panel_led_is_seen_from_outside(void)
 {
     /* Bottom left of each side is at the bottom of the edge it shares with
      * the previous side, round Left, Back, Right, Front. */
@@ -155,14 +206,23 @@ static void test_panel_led_is_seen_from_outside(void)
     }
 }
 
+static void test_panel_led_is_seen_from_outside(void)
+{
+    check_panel_led_is_seen_from_outside();
+    panel_set_wiring(PANEL_WIRING_ROWS);
+    check_panel_led_is_seen_from_outside();
+}
+
 int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_every_led_is_hit_exactly_once);
     RUN_TEST(test_chain_corners_match_wiring);
+    RUN_TEST(test_rows_chain_corners_match_wiring);
     RUN_TEST(test_inner_voxel_lights_nothing);
     RUN_TEST(test_frame_set_lights_every_face);
     RUN_TEST(test_panel_led_covers_its_panel);
+    RUN_TEST(test_rows_side_panel_test_fills_in_chain_order);
     RUN_TEST(test_panel_led_is_seen_from_outside);
     RUN_TEST(test_decode_rest_and_spin);
     return UNITY_END();
