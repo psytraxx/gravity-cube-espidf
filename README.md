@@ -130,6 +130,32 @@ panel. The sides fill upright, Top and Bottom as in the unfolded cross
 panel is dead or badly connected; if every panel from one point on stays
 dark, the chain is broken at the link before the first dark one.
 
+### Assembly pattern
+
+To check that every panel sits on its face the right way round while
+putting the cube together, turn on *Assembly pattern instead of the
+fluid* in menuconfig. After the panel test the cube then shows a still
+pattern for good:
+
+- The 4x4 centre of each panel glows in that panel's own colour.
+- Each edge strip (corners dark) glows in the colour of the panel on the
+  other side of that edge.
+
+| Panel | Own colour |
+|---|---|
+| 0 Left | red |
+| 1 Back | green |
+| 2 Right | blue |
+| 3 Front | yellow |
+| 4 Bottom | magenta |
+| 5 Top | white |
+
+On a correctly built cube every edge strip matches the centre of the
+panel beside it, so along each seam the two strips swap colours. A wrong
+centre colour means a panel on the wrong face; edge colours on the wrong
+sides mean a panel turned or flipped. The monitor logs the colour table
+at startup. Turn the option off again for the fluid.
+
 Keep the cube still from the end of the panel test until a second later:
 the gyro calibrates its zero offset then.
 
@@ -196,6 +222,7 @@ Without a token, anyone on the network can reflash the cube.
 | Panel wiring | Rows | Rows or zigzag columns, see [LEDs](#leds) |
 | Panel test at power on | on | Each panel fills green LED by LED, in chain order (~5 s) |
 | Physics step period | 18 ms | The physics constants are per step; a fluid step takes ~17 ms, so 18 ms (55 fps) is the shortest it keeps up with |
+| Assembly pattern | off | A still pattern instead of the fluid, for putting the panels in, see [Assembly pattern](#assembly-pattern) |
 | Tap threshold | 1000 mg | In 125 mg steps. Raise it if sloshing changes the colour, lower it if taps are missed |
 | IMU SPI pins | 11, 13, 12, 10 | MOSI, MISO, SCLK, CS |
 | IMU INT1 GPIO | 9 | Double-tap interrupt |
@@ -280,7 +307,7 @@ viewers at <https://psytraxx.github.io/gravity-cube-espidf/>.
 | `main/ota.c` | Wi-Fi, mDNS and the update server on core 1; keeps or rolls back a new image |
 | `main/bmi160.c` | BMI160 over SPI: setup, gyro calibration, FIFO reads |
 | `main/ws2812.c` | WS2812 chain through the `espressif/led_strip` component (RMT) |
-| `main/core/` | Everything that needs no hardware: fluid, colours, motion filter, panel map, IMU sample decoding |
+| `main/core/` | Everything that needs no hardware: fluid, colours, motion filter, panel map, assembly pattern, IMU sample decoding |
 | `test/host/` | Unity tests for `main/core`, run on the host |
 | `case/` | Enclosure: generator, STLs and 3D viewers |
 

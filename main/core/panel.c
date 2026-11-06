@@ -79,26 +79,41 @@ static uint16_t led_index(face_t face, uint8_t x, uint8_t y)
     return (uint16_t)(p->chain * N * N + i);
 }
 
+/* The LED of a face that shows the voxel; the voxel must be on that face. */
+static uint16_t face_led(face_t face, cell_t c)
+{
+    switch (face) {
+    case FACE_EAST:
+    case FACE_WEST:
+        return led_index(face, c.y, c.z);
+    case FACE_NORTH:
+    case FACE_SOUTH:
+        return led_index(face, c.x, c.z);
+    default:
+        return led_index(face, c.x, c.y);
+    }
+}
+
 int panel_leds(cell_t c, uint16_t leds[3])
 {
     int n = 0;
     if (c.x == 0) {
-        leds[n++] = led_index(FACE_EAST, c.y, c.z);
+        leds[n++] = face_led(FACE_EAST, c);
     }
     if (c.x == LAST) {
-        leds[n++] = led_index(FACE_WEST, c.y, c.z);
+        leds[n++] = face_led(FACE_WEST, c);
     }
     if (c.y == LAST) {
-        leds[n++] = led_index(FACE_NORTH, c.x, c.z);
+        leds[n++] = face_led(FACE_NORTH, c);
     }
     if (c.y == 0) {
-        leds[n++] = led_index(FACE_SOUTH, c.x, c.z);
+        leds[n++] = face_led(FACE_SOUTH, c);
     }
     if (c.z == 0) {
-        leds[n++] = led_index(FACE_DOWN, c.x, c.y);
+        leds[n++] = face_led(FACE_DOWN, c);
     }
     if (c.z == LAST) {
-        leds[n++] = led_index(FACE_UP, c.x, c.y);
+        leds[n++] = face_led(FACE_UP, c);
     }
     return n;
 }
@@ -120,31 +135,30 @@ void frame_set(frame_t *f, cell_t cell, color_t color)
     }
 }
 
-void frame_set_panel_led(frame_t *f, int panel, uint8_t col, uint8_t row, color_t color)
+cell_t panel_cell(int panel, uint8_t col, uint8_t row)
 {
-    /* In chain order; each panel's first face coordinate runs left to
-     * right, the second bottom to top. */
-    uint16_t led;
     switch (panel) {
     case 0: /* Left, seen from -x */
-        led = led_index(FACE_EAST, LAST - col, row);
-        break;
+        return (cell_t){0, (uint8_t)(LAST - col), row};
     case 1: /* Back, seen from -y */
-        led = led_index(FACE_SOUTH, col, row);
-        break;
+        return (cell_t){col, 0, row};
     case 2: /* Right, seen from +x */
-        led = led_index(FACE_WEST, col, row);
-        break;
+        return (cell_t){LAST, col, row};
     case 3: /* Front, seen from +y */
-        led = led_index(FACE_NORTH, LAST - col, row);
-        break;
+        return (cell_t){(uint8_t)(LAST - col), LAST, row};
     case 4: /* Bottom, Front edge at the top */
-        led = led_index(FACE_DOWN, LAST - col, row);
-        break;
+        return (cell_t){(uint8_t)(LAST - col), row, 0};
     default: /* Top, Front edge at the bottom */
-        led = led_index(FACE_UP, LAST - col, LAST - row);
-        break;
+        return (cell_t){(uint8_t)(LAST - col), (uint8_t)(LAST - row), LAST};
     }
+}
+
+void frame_set_panel_led(frame_t *f, int panel, uint8_t col, uint8_t row, color_t color)
+{
+    /* Panels in chain order, faces in enum order. */
+    static const face_t faces[PANEL_COUNT] = {FACE_EAST,  FACE_SOUTH, FACE_WEST,
+                                              FACE_NORTH, FACE_DOWN,  FACE_UP};
+    const uint16_t led = face_led(faces[panel], panel_cell(panel, col, row));
     uint8_t *px = &f->rgb[led * 3];
     px[0] = color.r;
     px[1] = color.g;

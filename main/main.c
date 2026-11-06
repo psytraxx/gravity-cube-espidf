@@ -8,6 +8,7 @@
  * and firmware updates run on core 1 too (ota.c). */
 #include <math.h>
 
+#include "assembly.h"
 #include "color.h"
 #include "esp_log.h"
 #include "esp_random.h"
@@ -84,6 +85,25 @@ static void panel_test(void)
 }
 #endif
 
+#if CONFIG_CUBE_ASSEMBLY_PATTERN
+/* Show the assembly pattern for good. The image counts as working once
+ * the pattern is out, so updates over Wi-Fi keep it. */
+static void assembly_pattern(void)
+{
+    ESP_LOGI(TAG, "Assembly pattern: each edge shows the colour of the panel across it");
+    for (int p = 0; p < PANEL_COUNT; p++) {
+        ESP_LOGI(TAG, "  %d %-6s %s", p, panel_name(p), assembly_color_name(p));
+    }
+    static frame_t frame;
+    assembly_frame(&frame);
+    xQueueSend(s_frames, &frame, portMAX_DELAY);
+    ota_app_ok();
+    for (;;) {
+        vTaskDelay(portMAX_DELAY);
+    }
+}
+#endif
+
 void app_main(void)
 {
     ESP_LOGI(TAG, "Gravity cube, %dx%dx%d", CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
@@ -102,6 +122,10 @@ void app_main(void)
 
 #if CONFIG_CUBE_PANEL_TEST
     panel_test();
+#endif
+
+#if CONFIG_CUBE_ASSEMBLY_PATTERN
+    assembly_pattern();
 #endif
 
     /* Calibrates the gyro, so the cube should be still. */

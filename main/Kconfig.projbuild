@@ -49,6 +49,19 @@ config CUBE_PANEL_TEST
         LED or panel, or a broken link in the chain, shows up straight
         away: every panel after a break stays dark.
 
+config CUBE_ASSEMBLY_PATTERN
+    bool "Assembly pattern instead of the fluid"
+    default n
+    help
+        For putting the panels into the case: after the panel test, show
+        a still pattern instead of the fluid. Each panel shows its own
+        colour in its centre (Left red, Back green, Right blue, Front
+        yellow, Bottom magenta, Top white) and, along each edge, the
+        colour of the panel across that edge; corners stay dark. Every
+        edge strip should match the centre of the panel beside it. A
+        wrong centre colour means a panel in the wrong place, edge
+        colours on the wrong sides a panel turned or flipped.
+
 config CUBE_TAP_THRESHOLD_MG
     int "Tap threshold (mg)"
     default 1000
