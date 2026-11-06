@@ -56,5 +56,8 @@ void frame_set(frame_t *f, cell_t cell, color_t color);
  * below it. */
 void frame_set_panel_led(frame_t *f, int panel, uint8_t col, uint8_t row, color_t color);
 
+/* The voxel under that LED, with the same panel, column and row. */
+cell_t panel_cell(int panel, uint8_t col, uint8_t row);
+
 /* The face a panel sits on, e.g. "Back". */
 const char *panel_name(int panel);

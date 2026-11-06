@@ -213,6 +213,18 @@ static void test_panel_led_is_seen_from_outside(void)
     check_panel_led_is_seen_from_outside();
 }
 
+static void test_panel_cell_is_under_its_led(void)
+{
+    for (int p = 0; p < PANEL_COUNT; p++) {
+        for (uint8_t row = 0; row < 8; row++) {
+            for (uint8_t col = 0; col < 8; col++) {
+                const cell_t c = panel_cell(p, col, row);
+                TEST_ASSERT_TRUE(lights(c.x, c.y, c.z, panel_led(p, col, row)));
+            }
+        }
+    }
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -224,6 +236,7 @@ int main(void)
     RUN_TEST(test_panel_led_covers_its_panel);
     RUN_TEST(test_rows_side_panel_test_fills_in_chain_order);
     RUN_TEST(test_panel_led_is_seen_from_outside);
+    RUN_TEST(test_panel_cell_is_under_its_led);
     RUN_TEST(test_decode_rest_and_spin);
     return UNITY_END();
 }
