@@ -9,6 +9,7 @@
 #include "esp_netif.h"
 #include "esp_ota_ops.h"
 #include "esp_system.h"
+#include "esp_timer.h"
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
@@ -28,14 +29,25 @@ static const char *TAG = "ota";
 /* Time for the reply to leave before the restart. */
 #define RESTART_DELAY_MS 500
 
+/* Reconnect delay after a dropped or failed join: doubles per failure. */
+#define RECONNECT_MIN_MS 1000
+#define RECONNECT_MAX_MS (60 * 1000)
+
 #define GOT_IP BIT0
 #define APP_OK BIT1
 
 static EventGroupHandle_t s_events;
+static esp_timer_handle_t s_reconnect_timer;
+static uint32_t s_reconnect_ms = RECONNECT_MIN_MS;
 
 static bool wifi_enabled(void)
 {
     return CONFIG_CUBE_WIFI_SSID[0] != '\0';
+}
+
+static void reconnect(void *arg)
+{
+    esp_wifi_connect();
 }
 
 static void on_wifi_event(void *arg, esp_event_base_t base, int32_t id, void *data)
@@ -44,13 +56,18 @@ static void on_wifi_event(void *arg, esp_event_base_t base, int32_t id, void *da
         esp_wifi_connect();
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
         const wifi_event_sta_disconnected_t *event = data;
-        ESP_LOGW(TAG, "Wi-Fi disconnected (reason %d), reconnecting", event->reason);
+        ESP_LOGW(TAG, "Wi-Fi disconnected (reason %d), retrying in %lu ms", event->reason,
+                 (unsigned long)s_reconnect_ms);
         xEventGroupClearBits(s_events, GOT_IP);
-        esp_wifi_connect();
+        esp_timer_stop(s_reconnect_timer);
+        ESP_ERROR_CHECK(esp_timer_start_once(s_reconnect_timer, s_reconnect_ms * 1000ULL));
+        s_reconnect_ms = s_reconnect_ms * 2 > RECONNECT_MAX_MS ? RECONNECT_MAX_MS
+                                                                : s_reconnect_ms * 2;
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
         const ip_event_got_ip_t *event = data;
         ESP_LOGI(TAG, "Wi-Fi up: http://" IPSTR "/ or http://%s.local/",
                  IP2STR(&event->ip_info.ip), CONFIG_CUBE_HOSTNAME);
+        s_reconnect_ms = RECONNECT_MIN_MS;
         xEventGroupSetBits(s_events, GOT_IP);
     }
 }
@@ -69,6 +86,9 @@ static void wifi_init(void)
     esp_netif_t *netif = esp_netif_create_default_wifi_sta();
     ESP_ERROR_CHECK(esp_netif_set_hostname(netif, CONFIG_CUBE_HOSTNAME));
 
+    const esp_timer_create_args_t timer = {.callback = reconnect, .name = "wifi_retry"};
+    ESP_ERROR_CHECK(esp_timer_create(&timer, &s_reconnect_timer));
+
     const wifi_init_config_t init = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&init));
     ESP_ERROR_CHECK(
@@ -82,6 +102,11 @@ static void wifi_init(void)
             sizeof(config.sta.password));
     config.sta.threshold.authmode =
         CONFIG_CUBE_WIFI_PASSWORD[0] != '\0' ? WIFI_AUTH_WPA2_PSK : WIFI_AUTH_OPEN;
+    /* Ignore WPA3 compatibility (RSN override) elements. Some routers, such as
+     * the FRITZ!Box 4040, advertise an RSNXE override in the beacon but leave
+     * it out of 4-way handshake message 3, which fails every join with reason
+     * 17 (IE differs in 4-way handshake). */
+    config.sta.disable_wpa3_compatible_mode = 1;
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &config));
     ESP_ERROR_CHECK(esp_wifi_start());
