@@ -61,12 +61,12 @@ static void on_wifi_event(void *arg, esp_event_base_t base, int32_t id, void *da
         xEventGroupClearBits(s_events, GOT_IP);
         esp_timer_stop(s_reconnect_timer);
         ESP_ERROR_CHECK(esp_timer_start_once(s_reconnect_timer, s_reconnect_ms * 1000ULL));
-        s_reconnect_ms = s_reconnect_ms * 2 > RECONNECT_MAX_MS ? RECONNECT_MAX_MS
-                                                                : s_reconnect_ms * 2;
+        s_reconnect_ms =
+            s_reconnect_ms * 2 > RECONNECT_MAX_MS ? RECONNECT_MAX_MS : s_reconnect_ms * 2;
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
         const ip_event_got_ip_t *event = data;
-        ESP_LOGI(TAG, "Wi-Fi up: http://" IPSTR "/ or http://%s.local/",
-                 IP2STR(&event->ip_info.ip), CONFIG_CUBE_HOSTNAME);
+        ESP_LOGI(TAG, "Wi-Fi up: http://" IPSTR "/ or http://%s.local/", IP2STR(&event->ip_info.ip),
+                 CONFIG_CUBE_HOSTNAME);
         s_reconnect_ms = RECONNECT_MIN_MS;
         xEventGroupSetBits(s_events, GOT_IP);
     }
@@ -91,15 +91,12 @@ static void wifi_init(void)
 
     const wifi_init_config_t init = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&init));
-    ESP_ERROR_CHECK(
-        esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, on_wifi_event, NULL));
-    ESP_ERROR_CHECK(
-        esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, on_wifi_event, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, on_wifi_event, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, on_wifi_event, NULL));
 
     wifi_config_t config = {0};
     strlcpy((char *)config.sta.ssid, CONFIG_CUBE_WIFI_SSID, sizeof(config.sta.ssid));
-    strlcpy((char *)config.sta.password, CONFIG_CUBE_WIFI_PASSWORD,
-            sizeof(config.sta.password));
+    strlcpy((char *)config.sta.password, CONFIG_CUBE_WIFI_PASSWORD, sizeof(config.sta.password));
     config.sta.threshold.authmode =
         CONFIG_CUBE_WIFI_PASSWORD[0] != '\0' ? WIFI_AUTH_WPA2_PSK : WIFI_AUTH_OPEN;
     /* Ignore WPA3 compatibility (RSN override) elements. Some routers, such as

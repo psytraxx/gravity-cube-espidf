@@ -176,9 +176,8 @@ void app_main(void)
             ESP_LOGI(TAG,
                      "Loop %lu: accel (%.2f, %.2f, %.2f) |%.2f| g, gyro (%.2f, %.2f, %.2f) rad/s, "
                      "physics %lld us, frame %lld us, LED send %lld us",
-                     (unsigned long)loops, accel.x, accel.y, accel.z,
-                     v3_len(accel), gyro_rate.x, gyro_rate.y, gyro_rate.z, physics_us, frame_us,
-                     s_led_send_us);
+                     (unsigned long)loops, accel.x, accel.y, accel.z, v3_len(accel), gyro_rate.x,
+                     gyro_rate.y, gyro_rate.z, physics_us, frame_us, s_led_send_us);
         }
         if (loops == LOG_EVERY) {
             ota_app_ok();

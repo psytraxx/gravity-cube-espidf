@@ -99,7 +99,7 @@ static void test_tilt_flows_downhill(void)
 static void test_stays_inside_cube_whichever_way_gravity_points(void)
 {
     const vec3_t dirs[] = {
-        {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},       {0, -1, 0},
+        {1, 0, 0}, {-1, 0, 0}, {0, 1, 0},           {0, -1, 0},
         {0, 0, 1}, {0, 0, -1}, {0.6f, -0.6f, 0.5f}, {-3, 2, 1},
     };
     for (size_t d = 0; d < sizeof dirs / sizeof dirs[0]; d++) {
@@ -143,7 +143,8 @@ static void test_pressure_solve_removes_divergence(void)
                                   f.vel[0][i + (N + 1) * (j + N * k)] +
                                   f.vel[1][i + N * ((j + 1) + (N + 1) * k)] -
                                   f.vel[1][i + N * (j + (N + 1) * k)] +
-                                  f.vel[2][i + N * (j + N * (k + 1))] - f.vel[2][i + N * (j + N * k)];
+                                  f.vel[2][i + N * (j + N * (k + 1))] -
+                                  f.vel[2][i + N * (j + N * k)];
                 worst = fmaxf(worst, fabsf(div));
             }
         }

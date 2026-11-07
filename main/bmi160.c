@@ -35,7 +35,7 @@ static const char *TAG = "bmi160";
 #define REG_INT_TAP1     0x64
 #define REG_CMD          0x7E
 /* Any read switches the chip to SPI; this one has no side effects. */
-#define REG_SPI_SELECT   0x7F
+#define REG_SPI_SELECT 0x7F
 
 #define CHIP_ID_BMI160 0xD1
 /* WHO_AM_I of the ST LSM6DS3 family, which comes on look-alike boards. */
@@ -55,7 +55,7 @@ static const char *TAG = "bmi160";
 #define ACC_RANGE_4G          0x05
 #define GYR_RANGE_1000DPS     0x01
 /* Gyro and accel in the FIFO, no headers: fixed 12-byte frames. */
-#define FIFO_GYR_ACC          0xC0
+#define FIFO_GYR_ACC 0xC0
 
 /* Double-tap engine. A tap is a jump in acceleration (the slope) above
  * the threshold; the 50 ms after it (shock) belong to the same tap, a tap
@@ -63,12 +63,12 @@ static const char *TAG = "bmi160";
  * 375 ms: INT_TAP_0 quiet 30 ms, shock 50 ms, duration 375 ms. */
 #define TAP_QUIET30_SHOCK50_DUR375 0x05
 /* At ±4 g the threshold counts in steps of 125 mg, up to 31 steps. */
-#define TAP_TH_STEP_MG        125
-#define TAP_TH_MAX            31
-#define INT_D_TAP             0x10 /* INT_EN_0, INT_MAP_0 and INT_STATUS_0 */
-#define INT_LATCHED           0x0F
+#define TAP_TH_STEP_MG 125
+#define TAP_TH_MAX     31
+#define INT_D_TAP      0x10 /* INT_EN_0, INT_MAP_0 and INT_STATUS_0 */
+#define INT_LATCHED    0x0F
 /* INT1 output on, push-pull, active high; INT2 off. */
-#define INT1_PUSH_PULL_HIGH   0x0A
+#define INT1_PUSH_PULL_HIGH 0x0A
 
 #define FIFO_SIZE 1024
 
@@ -186,8 +186,8 @@ static void i2c_scan(void)
             found++;
         }
     }
-    ESP_LOGI(TAG, "I2C scan: %d device(s) on SDA %d, SCL %d", found,
-             CONFIG_CUBE_IMU_SPI_MOSI, CONFIG_CUBE_IMU_SPI_SCLK);
+    ESP_LOGI(TAG, "I2C scan: %d device(s) on SDA %d, SCL %d", found, CONFIG_CUBE_IMU_SPI_MOSI,
+             CONFIG_CUBE_IMU_SPI_SCLK);
     i2c_del_master_bus(bus);
 }
 #endif
@@ -264,8 +264,9 @@ esp_err_t bmi160_init(void)
         vTaskDelay(pdMS_TO_TICKS(BMI160_SAMPLE_MS));
     }
     s_gyro_bias = v3_scale(sum, 1.0f / CALIBRATION_SAMPLES);
-    ESP_LOGI(TAG, "CHIP_ID 0x%02X, accel (%.2f, %.2f, %.2f) g, gyro offset (%.3f, %.3f, %.3f) rad/s",
-             id, s.accel.x, s.accel.y, s.accel.z, s_gyro_bias.x, s_gyro_bias.y, s_gyro_bias.z);
+    ESP_LOGI(TAG,
+             "CHIP_ID 0x%02X, accel (%.2f, %.2f, %.2f) g, gyro offset (%.3f, %.3f, %.3f) rad/s", id,
+             s.accel.x, s.accel.y, s.accel.z, s_gyro_bias.x, s_gyro_bias.y, s_gyro_bias.z);
 
     ESP_RETURN_ON_ERROR(write_reg(REG_FIFO_CONFIG1, FIFO_GYR_ACC), TAG, "fifo config");
     return fifo_flush();

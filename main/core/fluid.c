@@ -45,9 +45,8 @@
  * Checking a cell against itself and these visits every pair of adjacent
  * cells exactly once. */
 static const int8_t FORWARD_NEIGHBORS[13][3] = {
-    {1, 0, 0},  {-1, 1, 0}, {0, 1, 0},  {1, 1, 0},  {-1, -1, 1},
-    {0, -1, 1}, {1, -1, 1}, {-1, 0, 1}, {0, 0, 1},  {1, 0, 1},
-    {-1, 1, 1}, {0, 1, 1},  {1, 1, 1},
+    {1, 0, 0},  {-1, 1, 0}, {0, 1, 0}, {1, 1, 0},  {-1, -1, 1}, {0, -1, 1}, {1, -1, 1},
+    {-1, 0, 1}, {0, 0, 1},  {1, 0, 1}, {-1, 1, 1}, {0, 1, 1},   {1, 1, 1},
 };
 
 /* 1/s for the pressure solve, where s is how many of a cell's six faces

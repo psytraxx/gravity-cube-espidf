@@ -17,18 +17,18 @@ typedef enum {
 } face_t;
 
 typedef struct {
-    uint8_t chain;       /* position in the LED chain */
-    uint16_t rotation;   /* 0, 90, 180 or 270 degrees */
+    uint8_t chain;     /* position in the LED chain */
+    uint16_t rotation; /* 0, 90, 180 or 270 degrees */
     bool invert_x, invert_y;
 } panel_t;
 
 static const panel_t PANELS[FACE_COUNT] = {
-    [FACE_EAST] = {.chain = 0, .rotation = 270, .invert_x = false, .invert_y = false}, /* Left */
-    [FACE_SOUTH] = {.chain = 1, .rotation = 270, .invert_x = false, .invert_y = true}, /* Back */
-    [FACE_WEST] = {.chain = 2, .rotation = 270, .invert_x = false, .invert_y = true},  /* Right */
+    [FACE_EAST] = {.chain = 0, .rotation = 270, .invert_x = false, .invert_y = false},  /* Left */
+    [FACE_SOUTH] = {.chain = 1, .rotation = 270, .invert_x = false, .invert_y = true},  /* Back */
+    [FACE_WEST] = {.chain = 2, .rotation = 270, .invert_x = false, .invert_y = true},   /* Right */
     [FACE_NORTH] = {.chain = 3, .rotation = 270, .invert_x = false, .invert_y = false}, /* Front */
-    [FACE_DOWN] = {.chain = 4, .rotation = 0, .invert_x = false, .invert_y = false},  /* Bottom */
-    [FACE_UP] = {.chain = 5, .rotation = 90, .invert_x = false, .invert_y = true},    /* Top */
+    [FACE_DOWN] = {.chain = 4, .rotation = 0, .invert_x = false, .invert_y = false},    /* Bottom */
+    [FACE_UP] = {.chain = 5, .rotation = 90, .invert_x = false, .invert_y = true},      /* Top */
 };
 
 static panel_wiring_t s_wiring = PANEL_WIRING_ZIGZAG;
