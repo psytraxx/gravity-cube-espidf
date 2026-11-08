@@ -52,10 +52,10 @@ static float mean_radius(void)
 }
 
 /* Whether `p` lies in a cell of the can: its centre within the can's
- * radius at its height. */
+ * radius at its height, and below CAN_HEIGHT. */
 static bool in_can(vec3_t p)
 {
-    if (p.x < 0.0f || p.y < 0.0f || p.z < 0.0f || p.z > CAN_HEIGHT) {
+    if (p.x < 0.0f || p.y < 0.0f || p.z < 0.0f || floorf(p.z) + 0.5f >= CAN_HEIGHT) {
         return false;
     }
     const float cx = floorf(p.x) + 0.5f, cy = floorf(p.y) + 0.5f, cz = floorf(p.z) + 0.5f;

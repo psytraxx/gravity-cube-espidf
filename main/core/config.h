@@ -12,8 +12,8 @@
 
 #define CAN_LED_COUNT 500
 /* LEDs in one turn at the bottom and at the top. */
-#define CAN_LEDS_PER_TURN_BOTTOM 38.5f
-#define CAN_LEDS_PER_TURN_TOP    38.5f
+#define CAN_LEDS_PER_TURN_BOTTOM 39.0f
+#define CAN_LEDS_PER_TURN_TOP    37.5f
 /* Distance between two LEDs along the strip (100 LEDs per metre). */
 #define CAN_LED_SPACING_MM 10.0f
 /* Height of one turn, in LED spacings: the distance between two rows
