@@ -181,8 +181,8 @@ a new hat, or after rewinding the strip:
 4. **Mount the IMU and set its rotation.** Lay the board flat in the
    hat's crown, chip side up, its X arrow pointing any way round.
    Tilt the hat and a white band lights the side the firmware takes for
-   low. With *IMU rotation* at 0, tip the hat so that LED 0's side (the
-   red line) is lowest: the band lights the side the setting points at,
+   low. With *IMU rotation* set to 0, tip the hat so that LED 0's side
+   (the red line) is lowest: the band lights the side the setting points at,
    a quarter turn per line, counter-clockwise seen from above: on the
    green line 90, on the blue 180, on the yellow 270, in between in
    between. The monitor logs it exactly as `low side at N deg` (add 360
@@ -194,8 +194,8 @@ a new hat, or after rewinding the strip:
 5. **Calibration picture off.** Build and flash: the fluid.
 
 This hat came out at LED 0 on the brim, winding clockwise, 39 LEDs a
-turn at the brim and 36.8 at the top (straightened with the lines), and
-rows 0.65 LED spacings apart.
+turn at the brim and 36.8 at the top (straightened with the lines), rows
+0.65 LED spacings apart, and an IMU rotation of 90°, the default.
 
 ## Updates over Wi-Fi
 
@@ -261,7 +261,7 @@ Without a token, anyone on the network hat reflash the hat.
 | Calibration picture | off | Instead of the fluid: lines for the geometry, a band for the IMU; see [Setting up a hat](#setting-up-a-hat) |
 | Tap threshold | 1000 mg | Raise it if sloshing changes the colour, lower it if taps are missed |
 | IMU SPI pins | 23, 19, 18, 5 | MOSI, MISO, SCLK, CS |
-| IMU rotation | 0° | Where LED 0's side lies seen from the IMU board's X arrow, counter-clockwise; see [Setting up a hat](#setting-up-a-hat) |
+| IMU rotation | 90° | Where LED 0's side lies seen from the IMU board's X arrow, counter-clockwise; see [Setting up a hat](#setting-up-a-hat) |
 | I2C scan at startup | off | Wiring check: probes the IMU pins as I2C; finds the MPU-6500 at 0x68/0x69 after a power on |
 | Pulse the brightness with the sound | on | Reads the I2S microphone |
 | Microphone pins | 32, 33, 25 | SD, SCK, WS |

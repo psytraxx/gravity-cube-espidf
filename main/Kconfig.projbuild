@@ -59,7 +59,7 @@ config HAT_IMU_SPI_CS
 
 config HAT_IMU_YAW_DEG
     int "IMU rotation (degrees)"
-    default 0
+    default 90
     range 0 359
     help
         Where LED 0's side of the hat lies as the IMU board sees it: in
