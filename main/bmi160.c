@@ -8,7 +8,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
-#include "driver/i2c_master.h"
 #include "driver/spi_master.h"
 #include "sdkconfig.h"
 
@@ -38,8 +37,6 @@ static const char *TAG = "bmi160";
 #define REG_SPI_SELECT 0x7F
 
 #define CHIP_ID_BMI160 0xD1
-/* WHO_AM_I of the ST LSM6DS3 family, which comes on look-alike boards. */
-#define REG_LSM6_WHO_AM_I 0x0F
 
 #define CMD_SOFT_RESET  0xB6
 #define CMD_ACC_NORMAL  0x11
@@ -158,45 +155,8 @@ static esp_err_t fifo_flush(void)
     return write_reg(REG_CMD, CMD_FIFO_FLUSH);
 }
 
-#if CONFIG_CUBE_IMU_I2C_SCAN
-/* Log every address that acknowledges, on the SPI pins used as I2C. */
-static void i2c_scan(void)
-{
-    /* High before it is driven: a rising edge on CSB would select SPI. */
-    gpio_set_level(CONFIG_CUBE_IMU_SPI_CS, 1);
-    gpio_set_direction(CONFIG_CUBE_IMU_SPI_CS, GPIO_MODE_OUTPUT);
-
-    const i2c_master_bus_config_t cfg = {
-        .i2c_port = -1,
-        .sda_io_num = CONFIG_CUBE_IMU_SPI_MOSI,
-        .scl_io_num = CONFIG_CUBE_IMU_SPI_SCLK,
-        .clk_source = I2C_CLK_SRC_DEFAULT,
-        .glitch_ignore_cnt = 7,
-        .flags.enable_internal_pullup = true,
-    };
-    i2c_master_bus_handle_t bus;
-    if (i2c_new_master_bus(&cfg, &bus) != ESP_OK) {
-        ESP_LOGE(TAG, "I2C scan: bus setup failed");
-        return;
-    }
-    int found = 0;
-    for (uint16_t addr = 0x08; addr < 0x78; addr++) {
-        if (i2c_master_probe(bus, addr, 20) == ESP_OK) {
-            ESP_LOGI(TAG, "I2C scan: device at 0x%02x", addr);
-            found++;
-        }
-    }
-    ESP_LOGI(TAG, "I2C scan: %d device(s) on SDA %d, SCL %d", found, CONFIG_CUBE_IMU_SPI_MOSI,
-             CONFIG_CUBE_IMU_SPI_SCLK);
-    i2c_del_master_bus(bus);
-}
-#endif
-
 esp_err_t bmi160_init(void)
 {
-#if CONFIG_CUBE_IMU_I2C_SCAN
-    i2c_scan();
-#endif
     ESP_RETURN_ON_ERROR(bus_init(), TAG, "bus");
     /* The pull-down holds INT1 low until the chip drives it. */
     const gpio_config_t int1 = {
@@ -215,12 +175,6 @@ esp_err_t bmi160_init(void)
     uint8_t id = 0;
     ESP_RETURN_ON_ERROR(read_regs(REG_CHIP_ID, &id, 1), TAG, "chip id");
     if (id != CHIP_ID_BMI160) {
-        uint8_t who = 0;
-        read_regs(REG_LSM6_WHO_AM_I, &who, 1);
-        if (who == 0x69 || who == 0x6A || who == 0x6C) {
-            ESP_LOGE(TAG, "WHO_AM_I 0x%02X: this is an ST LSM6DS3-family chip, not a BMI160", who);
-            return ESP_ERR_NOT_SUPPORTED;
-        }
         ESP_LOGE(TAG, "CHIP_ID 0x%02X, expected 0x%02X: %s", id, CHIP_ID_BMI160,
                  id == 0x00 || id == 0xFF ? "nothing on the bus" : "not a BMI160");
         return ESP_ERR_NOT_FOUND;

@@ -17,12 +17,12 @@
 #include <stdint.h>
 
 #include "config.h"
+#include "frame.h"
 #include "particle.h"
 
 #define PANEL_COUNT 6
 #define PANEL_LEDS  (CUBE_SIZE * CUBE_SIZE)
 
-/* One frame: an RGB colour per LED, in chain order. */
 /* How the chain runs through each panel, from IN. On a side panel:
  *   PANEL_WIRING_ZIGZAG: up the first column, down the next and so on,
  *     to OUT at the bottom of the edge with the next panel.
@@ -37,14 +37,8 @@ typedef enum {
 /* Before any of the functions below; PANEL_WIRING_ZIGZAG until then. */
 void panel_set_wiring(panel_wiring_t wiring);
 
-typedef struct {
-    uint8_t rgb[LED_COUNT * 3];
-} frame_t;
-
 /* LEDs showing a voxel, at most three (a corner). Returns how many. */
 int panel_leds(cell_t cell, uint16_t leds[3]);
-
-void frame_clear(frame_t *f);
 
 /* Light every LED that shows the voxel. */
 void frame_set(frame_t *f, cell_t cell, color_t color);

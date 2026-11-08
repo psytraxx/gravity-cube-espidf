@@ -82,14 +82,9 @@ its interrupt line, all on the SuperMini's header:
 
 VIN (into the board's regulator), INT2 and the auxiliary pins (OCS,
 SCX, SDX) stay unconnected. INT1 is push-pull at 3.3 V, so it needs no
-resistor. The chip starts on I2C; the first
-rising edge on CS switches it to SPI until it is power cycled. SPI runs
-at 1 MHz (the chip takes up to 10 MHz). The pins are settable in
-menuconfig.
-
-The same 12-pin board is also sold with an ST LSM6DS3 on it, and the
-silkscreen does not always say which: the firmware logs `this is an ST
-LSM6DS3-family chip` if it finds one, and does not drive it.
+resistor. The chip starts on I2C; the first rising edge on CS switches
+it to SPI until it is power cycled. SPI runs at 1 MHz (the chip takes
+up to 10 MHz). The pins are settable in menuconfig.
 
 ### INMP441 microphone (I2S)
 
@@ -216,7 +211,6 @@ Without a token, anyone on the network can reflash the cube.
 | Tap threshold | 1000 mg | In 125 mg steps. Raise it if sloshing changes the colour, lower it if taps are missed |
 | IMU SPI pins | 11, 13, 12, 10 | MOSI, MISO, SCLK, CS |
 | IMU INT1 GPIO | 9 | Double-tap interrupt |
-| I2C scan at startup | off | Wiring check: probes the IMU pins as I2C; finds the BMI160 at 0x68/0x69 after a power on |
 | Wi-Fi SSID, password | empty | Network for updates over Wi-Fi; an empty SSID turns Wi-Fi off |
 | Hostname | cube | Answers at `http://cube.local/` |
 | Update token | empty | Updates need `Authorization: Bearer <token>`; empty lets anyone on the network update |
@@ -297,7 +291,7 @@ viewers at <https://psytraxx.github.io/gravity-cube-espidf/>.
 | `main/ota.c` | Wi-Fi, mDNS and the update server on core 1; keeps or rolls back a new image |
 | `main/bmi160.c` | BMI160 over SPI: setup, gyro calibration, FIFO reads |
 | `main/ws2812.c` | WS2812 chain through the `espressif/led_strip` component (RMT) |
-| `main/core/` | Everything that needs no hardware: fluid, colours, motion filter, panel map, assembly pattern, IMU sample decoding |
+| `main/core/` | Everything that needs no hardware: fluid, colours, frames, the panel map and the fluid's picture on it, assembly pattern, motion filter, IMU sample decoding and batching |
 | `test/host/` | Unity tests for `main/core`, run on the host |
 | `case/` | Enclosure: generator, STLs and 3D viewers |
 
