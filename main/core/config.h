@@ -12,13 +12,13 @@
 
 #define CAN_LED_COUNT 500
 /* LEDs in one turn at the bottom and at the top. */
-#define CAN_LEDS_PER_TURN_BOTTOM 39.0f
-#define CAN_LEDS_PER_TURN_TOP    39.0f
+#define CAN_LEDS_PER_TURN_BOTTOM 38.5f
+#define CAN_LEDS_PER_TURN_TOP    38.5f
 /* Distance between two LEDs along the strip (100 LEDs per metre). */
 #define CAN_LED_SPACING_MM 10.0f
 /* Height of one turn, in LED spacings: the distance between two rows
  * divided by the distance between two LEDs along the strip. */
-#define CAN_ROW_PITCH 0.8f
+#define CAN_ROW_PITCH 0.65f
 /* Where the data enters (1: the top turn, 0: the bottom one), and which
  * way the strip winds seen from above (1: clockwise). */
 #define CAN_START_AT_TOP 0
@@ -26,7 +26,7 @@
 
 /* Size of a fluid cell, in LED spacings. The fluid's cost grows with the
  * cube of 1 / CAN_CELL_LEDS; 1.4 gives the can about 60 cells a layer
- * and a cell every 1.75 rows, at about the cube firmware's cost per step. */
+ * and a cell about every 2 rows, at about the cube firmware's cost per step. */
 #define CAN_CELL_LEDS 1.4f
 
 /* Turns of the spiral: the LEDs per turn change evenly from one end to
@@ -44,7 +44,7 @@
  * CAN_HEIGHT high (test_fluid checks). */
 #define FLUID_NX 9
 #define FLUID_NY 9
-#define FLUID_NZ 8
+#define FLUID_NZ 7
 
 #define LED_COUNT CAN_LED_COUNT
 

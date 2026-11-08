@@ -17,7 +17,7 @@ for ESP-IDF 6.1. The physics is a port of the fluid solver in
 |---|---|
 | ESP32-WROOM-32 board | 4 MB flash |
 | MPU-92/65 board | MPU-6500 (chip marked MP65), 3–5 V supply (on-board regulator), wired for SPI |
-| WS2812B strip, 500 LEDs | Wound clockwise (seen from above) in a spiral of 39 LEDs a turn, about 12.8 turns (13 rows), from the bottom up |
+| WS2812B strip, 500 LEDs | Wound clockwise (seen from above) in a spiral of 38.5 LEDs a turn, 13 turns, from the bottom up |
 | I2S microphone (e.g. INMP441) | On GPIO 32, 33 and 25; its sound pulses the brightness |
 | 330 Ω resistor | In series with the data line, at the strip's input |
 | 1000 µF capacitor or more | Across 5 V and GND at the strip's input (10 V or more) |
@@ -101,21 +101,21 @@ GPIO 13.
 ### The strip and the IMU
 
 The strip's geometry is in [`main/core/config.h`](main/core/config.h):
-500 LEDs, 39 a turn, the data entering at the bottom and the strip
+500 LEDs, 38.5 a turn, the data entering at the bottom and the strip
 winding clockwise seen from above. For another can, read the numbers
 off with the ruler (below) and set:
 
 | Setting | Default | |
 |---|---|---|
-| `CAN_LEDS_PER_TURN_BOTTOM` | 39 | LEDs in the bottom turn |
-| `CAN_LEDS_PER_TURN_TOP` | 39 | LEDs in the top turn; fewer than at the bottom for a can that narrows |
+| `CAN_LEDS_PER_TURN_BOTTOM` | 38.5 | LEDs in the bottom turn |
+| `CAN_LEDS_PER_TURN_TOP` | 38.5 | LEDs in the top turn; fewer than at the bottom for a can that narrows |
 | `CAN_LED_SPACING_MM` | 10.0 | Distance between two LEDs along the strip (100 LEDs per metre) |
-| `CAN_ROW_PITCH` | 0.8 | Distance between two turns, divided by the LED spacing |
+| `CAN_ROW_PITCH` | 0.65 | Distance between two turns, divided by the LED spacing |
 | `CAN_START_AT_TOP` | 0 | 1 if the data enters at the top turn |
 | `CAN_CLOCKWISE` | 1 | 1 if the strip winds clockwise seen from above |
 
 The LEDs per turn change evenly from bottom to top, so a can that
-narrows works too; at 39 a turn, 500 LEDs make about 12.8 turns. The
+narrows works too; at 38.5 a turn, 500 LEDs make 13 turns. The
 can's radius at each height follows from its LEDs per turn there.
 
 The grid round the can (`FLUID_NX`, `FLUID_NY`, `FLUID_NZ`) has to hold
@@ -322,10 +322,10 @@ flashes the fluid, steady noise settles back to dim within seconds, and
 beats over loud music still pulse.
 
 **Fluid.** An incompressible FLIP fluid: inviscid Navier-Stokes on a
-staggered grid of 9 × 9 × 8 cells, each 1.4 LED spacings across, about
-1.75 rows high (coarser cells would look blockier, finer ones cost too
+staggered grid of 9 × 9 × 7 cells, each 1.4 LED spacings across, about
+2 rows high (coarser cells would look blockier, finer ones cost too
 much time on an ESP32). The can is the cells whose centres lie within
-its radius at their height: 61 per layer, as round as cells that size
+its radius at their height and below its top: 61 per layer, 6 layers, as round as cells that size
 allow; its walls are their outer faces. Faces with no cell of the can on either
 side take no part, as faces beyond the grid's edge do. Each step the
 particles take gravity and the forces of the turning can (Euler,
@@ -334,15 +334,15 @@ Gauss-Seidel pressure solve (60 passes) makes the flow divergence-free
 against the walls. The particles take back the change (80 % FLIP, 20 %
 PIC to damp noise), move, and are pushed apart so they stay evenly
 spread; cells packed above two particles get a little outflow, so the
-fluid keeps its volume. About 490 particles fill the bottom half.
+fluid keeps its volume. About 370 particles fill the bottom half.
 
 A can is closed and narrow, so shoving it sideways only presses on the
 fluid: it moves where it has a free surface to move into. Spun about
 its axis, the fluid mostly stays put while the can turns round it, as
 liquid in a glass does at first.
 
-**LEDs.** Each LED's place on the spiral follows from its index: at 39
-LEDs a turn, LED *i* sits *i* / 39 of the way round from LED 0
+**LEDs.** Each LED's place on the spiral follows from its index: at 38.5
+LEDs a turn, LED *i* sits *i* / 38.5 turns round from LED 0
 (clockwise) and as many rows up, on the circle of the can's radius at
 that height. With LEDs per turn that change from bottom to top, it sits
 where the LEDs counted so far reach *i*. It shows the fluid half a cell

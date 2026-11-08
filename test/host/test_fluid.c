@@ -191,7 +191,7 @@ static void test_spin_lags_and_flings_outwards(void)
 static void test_tint_varies_across_fluid_and_with_speed(void)
 {
     float west, east, still;
-    fluid_sample(&f, (vec3_t){AXIS_X - 1.5f, AXIS_Y, 1.5f}, &west);
+    fluid_sample(&f, (vec3_t){AXIS_X - 1.5f, AXIS_Y, 0.5f}, &west);
     fluid_sample(&f, (vec3_t){AXIS_X + 1.5f, AXIS_Y, 0.4f * CAN_HEIGHT}, &east);
     TEST_ASSERT_LESS_THAN_FLOAT(east - 20.0f, west);
     TEST_ASSERT_GREATER_OR_EQUAL_FLOAT(-FLUID_TINT_SPREAD, west);
