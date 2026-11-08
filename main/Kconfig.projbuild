@@ -2,11 +2,14 @@ menu "Gravity can"
 
 config CAN_LED_GPIO
     int "LED data GPIO"
-    default 27
+    default 12
     help
         Data line of the WS2812B strip, through a 330 ohm series
-        resistor. GPIO 27 is free on an ESP32-WROOM-32 and is not a
-        strapping pin.
+        resistor. GPIO 12 is a strapping pin: high at reset, it selects
+        1.8 V flash and the board does not boot. The strip's input does
+        not pull it up, so it stays low; if the board fails to boot with
+        the strip connected, move the data line to a free pin such as
+        GPIO 27.
 
 config CAN_FRAME_MS
     int "Physics step period (ms)"
@@ -15,17 +18,33 @@ config CAN_FRAME_MS
     help
         One physics step per period. The physics constants are per step,
         so a longer period slows the fluid down. The strip needs about
-        6 ms per frame.
+        15 ms per frame, and a fluid step about as long as on the cube
+        firmware (17 ms on an ESP32-S3); the status log shows both.
 
 config CAN_LED_TEST
     bool "LED test at power on"
     default y
     help
-        Before the fluid starts, fill the strip green LED by LED, from the
-        data input on (about 2.4 seconds), then light one LED per turn at
-        LED 0's angle for 2 seconds. The second picture is a straight line
-        up the can if the LEDs per turn in main/core/config.h are right,
-        and marks where the IMU's X axis has to point.
+        Before the fluid starts, fill the strip green from the data input
+        on, five LEDs at a time (about 2 seconds), then light one LED per
+        turn at LED 0's angle for 2 seconds. The second picture is a
+        straight line up the can if the LEDs per turn in
+        main/core/config.h are right, and marks where the IMU's X axis
+        has to point.
+
+config CAN_CALIBRATION
+    bool "Calibration picture instead of the fluid"
+    default n
+    help
+        For setting up the strip's geometry and the IMU: after the LED
+        test, show a calibration picture instead of the fluid. Four
+        coloured lines run up the can, one LED per turn each: red at LED
+        0's angle, then green, blue and yellow a quarter turn apart. They
+        stand straight if the LEDs per turn in main/core/config.h are
+        right, and run red, green, blue, yellow counter-clockwise seen
+        from above if the winding direction is. Tilt the can and a white
+        band lights the low side, where the fluid would run: if it lights
+        the wrong side on an axis, flip that axis in MPU6500_AXIS_MAP.
 
 config CAN_TAP_THRESHOLD_MG
     int "Tap threshold (mg)"

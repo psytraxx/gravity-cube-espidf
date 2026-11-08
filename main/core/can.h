@@ -2,10 +2,12 @@
  * fluid behind them.
  *
  * LED 0 sits on the +x side of the can (angle 0), on the bottom turn, or
- * the top one with CAN_START_AT_TOP. Each LED after it is a step of
- * 1 / CAN_LEDS_PER_TURN of a turn further round, counter-clockwise seen
- * from above (from +x towards +y), or clockwise with CAN_CLOCKWISE, and
- * climbs (or drops) CAN_ROW_PITCH per turn. */
+ * the top one with CAN_START_AT_TOP. The strip runs counter-clockwise
+ * seen from above (from +x towards +y), or clockwise with CAN_CLOCKWISE,
+ * and climbs (or drops) CAN_ROW_PITCH LED spacings per turn. A turn holds
+ * CAN_LEDS_PER_TURN_BOTTOM LEDs at the bottom and CAN_LEDS_PER_TURN_TOP
+ * at the top, changing evenly in between; each LED sits on the circle of
+ * the can's radius at its height. */
 #pragma once
 
 #include <stdbool.h>
@@ -30,8 +32,11 @@ float can_led_angle(int led);
 /* Height of LED `led` above the floor, in cells. */
 float can_led_height(int led);
 
-/* Where LED `led` sits on the LED ring, in grid coordinates. */
+/* Where LED `led` sits on the can's wall, in grid coordinates. */
 vec3_t can_led_pos(int led);
+
+/* The LED index, not rounded, `t` turns on from LED 0. */
+float can_led_at_turns(float t);
 
 /* Which LEDs show fluid. Each LED lights once the fluid density just
  * inside the wall in front of it reaches a threshold and goes dark again
@@ -45,3 +50,12 @@ void can_view_init(can_view_t *v);
 /* Light every LED with fluid behind it in `hue` plus the fluid's tint
  * there; the rest stay dark. */
 void can_view_frame(can_view_t *v, const fluid_t *f, uint32_t hue, frame_t *frame);
+
+/* Calibration picture. Four coloured lines run up the can, the LED
+ * nearest each angle on every turn: red at LED 0's angle (+x), then green
+ * (+y), blue (-x) and yellow (-y) a quarter turn apart, counter-clockwise
+ * seen from above. Straight lines mean the LEDs per turn are right, the
+ * colour order that the winding direction is. While the can tilts, a
+ * white band lights the side `accel` (in g, the way the fluid falls)
+ * points to, under the lines. */
+void can_calibration_frame(frame_t *frame, vec3_t accel);

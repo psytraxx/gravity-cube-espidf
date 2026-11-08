@@ -51,15 +51,15 @@ static float mean_radius(void)
     return sum / (float)f.n;
 }
 
-/* Whether `p` lies in a cell of the can: its centre within CAN_RADIUS of
- * the axis. */
+/* Whether `p` lies in a cell of the can: its centre within the can's
+ * radius at its height. */
 static bool in_can(vec3_t p)
 {
     if (p.x < 0.0f || p.y < 0.0f || p.z < 0.0f || p.z > CAN_HEIGHT) {
         return false;
     }
-    const float cx = floorf(p.x) + 0.5f, cy = floorf(p.y) + 0.5f;
-    return hypotf(cx - AXIS_X, cy - AXIS_Y) < CAN_RADIUS;
+    const float cx = floorf(p.x) + 0.5f, cy = floorf(p.y) + 0.5f, cz = floorf(p.z) + 0.5f;
+    return hypotf(cx - AXIS_X, cy - AXIS_Y) < can_radius_at(cz);
 }
 
 /* Highest particle: the surface. */
@@ -75,8 +75,8 @@ static float top(void)
 /* The grid holds the can, and has room for half a can of particles. */
 static void test_grid_fits_can(void)
 {
-    TEST_ASSERT_TRUE(2.0f * CAN_RADIUS <= FLUID_NX);
-    TEST_ASSERT_TRUE(2.0f * CAN_RADIUS <= FLUID_NY);
+    TEST_ASSERT_TRUE(2.0f * CAN_RADIUS_MAX <= FLUID_NX);
+    TEST_ASSERT_TRUE(2.0f * CAN_RADIUS_MAX <= FLUID_NY);
     TEST_ASSERT_TRUE(CAN_HEIGHT <= FLUID_NZ);
     TEST_ASSERT_TRUE(CAN_HEIGHT > FLUID_NZ - 1);
     TEST_ASSERT_LESS_THAN_INT(FLUID_PARTICLES, f.n);

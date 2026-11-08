@@ -4,9 +4,9 @@ Project guidance for Claude Code working in this repository.
 
 ## What this is
 
-ESP-IDF 6.1 firmware in C for a "gravity can": a 200-LED WS2812B strip
-wound in a spiral round a cylinder, on an ESP32-WROOM-32 with an
-MPU-6500 IMU. README.md describes the hardware, wiring and design.
+ESP-IDF 6.1 firmware in C for a "gravity can": a 500-LED WS2812B strip
+wound in a spiral round a slightly conical cylinder, on an
+ESP32-WROOM-32 with an MPU-6500 IMU. README.md describes the hardware, wiring and design.
 
 ## Layout
 

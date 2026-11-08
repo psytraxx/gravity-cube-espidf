@@ -171,25 +171,32 @@ static void collide_axis(float *pos, float *vel, float lo, float hi, bool open_l
 
 /* Keep a particle off the can's walls, which are the closed faces of its
  * cells; a wall stops motion into it. A particle that cut a corner into a
- * cell outside the can first goes back across into the one next to it
- * towards the axis. */
+ * cell outside the can first goes back into the nearest cell of the can
+ * beside, above or below it, a step towards the can's middle along one
+ * axis or two. */
 static void collide_walls(const fluid_t *f, particle_t *p)
 {
-    int i = cell_of(p->pos.x, NX), j = cell_of(p->pos.y, NY);
-    const int k = cell_of(p->pos.z, NZ);
+    int i = cell_of(p->pos.x, NX), j = cell_of(p->pos.y, NY), k = cell_of(p->pos.z, NZ);
     if (!(f->open[cell_index(i, j, k)] & OPEN_IN)) {
-        const int ti = i + (p->pos.x < AXIS_X ? 1 : -1);
-        const int tj = j + (p->pos.y < AXIS_Y ? 1 : -1);
-        if (f->open[cell_index(ti, j, k)] & OPEN_IN) {
-            i = ti;
-        } else {
-            j = tj;
-            if (!(f->open[cell_index(i, j, k)] & OPEN_IN)) {
+        static const int8_t STEPS[6][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1},
+                                           {1, 1, 0}, {1, 0, 1}, {0, 1, 1}};
+        const int di = p->pos.x < AXIS_X ? 1 : -1;
+        const int dj = p->pos.y < AXIS_Y ? 1 : -1;
+        const int dk = p->pos.z < CAN_HEIGHT / 2.0f ? 1 : -1;
+        for (int n = 0; n < 6; n++) {
+            const int ti = i + STEPS[n][0] * di, tj = j + STEPS[n][1] * dj;
+            const int tk = k + STEPS[n][2] * dk;
+            if (ti >= 0 && ti < NX && tj >= 0 && tj < NY && tk >= 0 && tk < NZ &&
+                (f->open[cell_index(ti, tj, tk)] & OPEN_IN)) {
                 i = ti;
+                j = tj;
+                k = tk;
+                break;
             }
         }
         p->pos.x = clampf(p->pos.x, (float)i, (float)i + 1.0f);
         p->pos.y = clampf(p->pos.y, (float)j, (float)j + 1.0f);
+        p->pos.z = clampf(p->pos.z, (float)k, (float)k + 1.0f);
     }
     const uint8_t open = f->open[cell_index(i, j, k)];
     collide_axis(&p->pos.x, &p->vel.x, (float)i, (float)i + 1.0f, open & OPEN_X0, open & OPEN_X1);
@@ -423,15 +430,16 @@ static void update_density(fluid_t *f)
     }
 }
 
-/* Whether cell (i, j, k) lies in the can: its centre inside CAN_RADIUS
- * of the axis and below CAN_HEIGHT. */
+/* Whether cell (i, j, k) lies in the can: its centre inside the can's
+ * radius at its height, and below CAN_HEIGHT. */
 static bool inside(int i, int j, int k)
 {
     if (i < 0 || i >= NX || j < 0 || j >= NY || k < 0 || k >= NZ) {
         return false;
     }
     const float dx = (float)i + 0.5f - AXIS_X, dy = (float)j + 0.5f - AXIS_Y;
-    return dx * dx + dy * dy < CAN_RADIUS * CAN_RADIUS && (float)k + 0.5f < CAN_HEIGHT;
+    const float z = (float)k + 0.5f, r = can_radius_at(z);
+    return dx * dx + dy * dy < r * r && z < CAN_HEIGHT;
 }
 
 void fluid_init(fluid_t *f)
@@ -473,7 +481,7 @@ void fluid_populate(fluid_t *f)
     /* Two particles per cell, on opposite corners of a smaller cube in
      * it: evenly spread and clear of the walls. */
     static const float OFFSETS[2] = {0.3f, 0.7f};
-    const int layers = (int)(CAN_HEIGHT / 2.0f);
+    const int layers = (int)lrintf(CAN_HEIGHT / 2.0f);
     f->n = 0;
     for (int z = 0; z < layers; z++) {
         for (int y = 0; y < NY; y++) {
@@ -487,7 +495,7 @@ void fluid_populate(fluid_t *f)
                     /* Shades run across the can and up it: from -1 on the
                      * -x side at the floor to +1 on the +x side at the
                      * half-full level. */
-                    const float across = (pos.x - AXIS_X) / CAN_RADIUS;
+                    const float across = (pos.x - AXIS_X) / CAN_RADIUS_MAX;
                     const float up = pos.z / (0.5f * CAN_HEIGHT);
                     const float t = clampf(0.5f * (across + up), -1.0f, 1.0f);
                     f->p[f->n++] = (particle_t){

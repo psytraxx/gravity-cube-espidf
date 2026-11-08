@@ -1,8 +1,9 @@
 /* Fluid: an incompressible FLIP fluid (inviscid Navier-Stokes) in the
  * can, which stands in a grid of FLUID_NX x FLUID_NY x FLUID_NZ cells.
- * The can is the cells whose centres lie within CAN_RADIUS of its axis
- * and below CAN_HEIGHT; its walls are their outer faces, so it is round
- * as far as a grid of cells allows.
+ * The can is the cells whose centres lie within its radius at their
+ * height (can_radius_at) and below CAN_HEIGHT; its walls are their outer
+ * faces, so it is round, and narrows as it climbs, as far as a grid of
+ * cells allows.
  *
  * Particles carry the fluid's velocity. Each step they are accelerated by
  * gravity and by the can's rotation, move, and are pushed apart so they

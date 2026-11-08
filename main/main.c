@@ -3,7 +3,7 @@
  * it and the fluid sloshes.
  *
  * Core 0 (this task) reads the IMU, runs the physics and builds frames;
- * core 1 sends them to the LEDs. The RMT send takes ~6 ms per changed
+ * core 1 sends them to the LEDs. The RMT send takes ~15 ms per changed
  * frame, so the two overlap: core 0 computes the next frame while core 1
  * sends the current one, and only waits if core 1 is still busy. Wi-Fi
  * and firmware updates run on core 1 too (ota.c). */
@@ -36,10 +36,11 @@ static const char *TAG = "can";
 
 #define LOG_EVERY 100
 
-/* One LED per step; a frame takes ~6 ms to send. */
-#define LED_TEST_STEP_MS 12
-#define LED_TEST_COLOR   ((color_t){0, 60, 0})
-#define LED_TEST_LINE_MS 2000
+/* Five LEDs per step; a frame takes ~15 ms to send. */
+#define LED_TEST_STEP_LEDS 5
+#define LED_TEST_STEP_MS   20
+#define LED_TEST_COLOR     ((color_t){0, 60, 0})
+#define LED_TEST_LINE_MS   2000
 
 /* Frames from core 0 to core 1. One slot. */
 static QueueHandle_t s_frames;
@@ -65,9 +66,9 @@ static void led_task(void *arg)
 }
 
 #if CONFIG_CAN_LED_TEST
-/* The strip fills green LED by LED from the data input on. Then the LED
- * nearest LED 0's angle on each turn lights: a straight line up the can,
- * if CAN_LEDS_PER_TURN is right. Then all off. */
+/* The strip fills green from the data input on, five LEDs at a time.
+ * Then the LED nearest LED 0's angle on each turn lights: a straight line
+ * up the can, if the LEDs per turn in config.h are right. Then all off. */
 static void led_test(void)
 {
     static frame_t frame;
@@ -75,13 +76,15 @@ static void led_test(void)
     frame_clear(&frame);
     for (int i = 0; i < LED_COUNT; i++) {
         frame_set_led(&frame, i, LED_TEST_COLOR);
-        xQueueSend(s_frames, &frame, portMAX_DELAY);
-        vTaskDelay(pdMS_TO_TICKS(LED_TEST_STEP_MS));
+        if ((i + 1) % LED_TEST_STEP_LEDS == 0 || i == LED_COUNT - 1) {
+            xQueueSend(s_frames, &frame, portMAX_DELAY);
+            vTaskDelay(pdMS_TO_TICKS(LED_TEST_STEP_MS));
+        }
     }
     ESP_LOGI(TAG, "LED test: one LED per turn at LED 0's angle (the IMU's X axis)");
     frame_clear(&frame);
-    for (int t = 0; t <= CAN_TURNS; t++) {
-        frame_set_led(&frame, (int)lrintf((float)t * CAN_LEDS_PER_TURN), LED_TEST_COLOR);
+    for (int t = 0; t <= (int)CAN_TURNS; t++) {
+        frame_set_led(&frame, (int)lrintf(can_led_at_turns((float)t)), LED_TEST_COLOR);
     }
     xQueueSend(s_frames, &frame, portMAX_DELAY);
     vTaskDelay(pdMS_TO_TICKS(LED_TEST_LINE_MS));
@@ -90,9 +93,45 @@ static void led_test(void)
 }
 #endif
 
+#if CONFIG_CAN_CALIBRATION
+/* Show the calibration picture for good, the white band following the
+ * IMU. The image counts as working once the picture is out, so updates
+ * over Wi-Fi keep it. */
+static void calibration(bool have_imu)
+{
+    ESP_LOGI(TAG, "Calibration: red +x (LED 0), green +y, blue -x, yellow -y; "
+                  "white on the low side");
+    static imu_sample_t samples[MAX_SAMPLES];
+    static frame_t frame;
+    vec3_t accel = v3(0.0f, 0.0f, -1.0f);
+    uint32_t loops = 0;
+    TickType_t wake = xTaskGetTickCount();
+    for (;;) {
+        const int n = have_imu ? mpu6500_read(samples, MAX_SAMPLES) : 0;
+        if (n > 0) {
+            vec3_t sum = v3(0.0f, 0.0f, 0.0f);
+            for (int i = 0; i < n; i++) {
+                sum = v3_add(sum, samples[i].accel);
+            }
+            accel = v3_scale(sum, 1.0f / (float)n);
+        }
+        can_calibration_frame(&frame, accel);
+        xQueueSend(s_frames, &frame, portMAX_DELAY);
+        if (++loops == 1) {
+            ota_app_ok();
+        }
+        if (loops % LOG_EVERY == 0) {
+            ESP_LOGI(TAG, "Calibration: accel (%.2f, %.2f, %.2f) g, low side at %.0f deg", accel.x,
+                     accel.y, accel.z, atan2f(accel.y, accel.x) * 57.2958f);
+        }
+        xTaskDelayUntil(&wake, pdMS_TO_TICKS(CONFIG_CAN_FRAME_MS));
+    }
+}
+#endif
+
 void app_main(void)
 {
-    ESP_LOGI(TAG, "Gravity can, %d LEDs in %d turns", LED_COUNT, CAN_TURNS);
+    ESP_LOGI(TAG, "Gravity can, %d LEDs in %.1f turns", LED_COUNT, CAN_TURNS);
 
     /* Joins Wi-Fi during the LED test. */
     ota_start();
@@ -110,6 +149,10 @@ void app_main(void)
         ESP_LOGW(TAG, "No MPU-6500: check the wiring (README.md#wiring). "
                       "Running with gravity towards the floor, no spin or taps.");
     }
+
+#if CONFIG_CAN_CALIBRATION
+    calibration(have_imu);
+#endif
 
     static fluid_t fluid;
     fluid_init(&fluid);

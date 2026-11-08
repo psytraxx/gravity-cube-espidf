@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 680" width="1180" height="680" font-family="Helvetica, Arial, sans-serif" font-size="13">
+  <title>Gravity can wiring</title>
+  <rect width="1180" height="680" fill="#ffffff"/>
+
+  <g fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- 5 V rail -->
+    <path stroke="#d32f2f" d="M90 280 V50 H1060"/>
+    <path stroke="#d32f2f" d="M360 50 V80 M360 112 V170"/>
+    <path stroke="#d32f2f" d="M900 50 V150"/>
+    <path stroke="#d32f2f" d="M1060 50 V310"/>
+
+    <!-- GND rail -->
+    <path stroke="#222222" d="M90 380 V600 H1060"/>
+    <path stroke="#222222" d="M360 530 V600"/>
+    <path stroke="#222222" d="M900 530 V600"/>
+    <path stroke="#222222" d="M1060 326 V600"/>
+    <path stroke="#222222" d="M760 365 H780 V600 M760 495 H780"/>
+
+    <!-- 3V3 -->
+    <path stroke="#ef6c00" d="M500 410 H620 M620 385 V430"/>
+
+    <!-- LED data -->
+    <path stroke="#1565c0" d="M500 190 H740 M800 190 H830"/>
+    <path stroke="#1565c0" d="M740 190 l5 -9 l10 18 l10 -18 l10 18 l10 -18 l10 18 l5 -9"/>
+
+    <!-- SPI -->
+    <path stroke="#6a1b9a" d="M500 290 H600 M500 315 H600 M500 340 H600 M500 365 H600"/>
+
+    <!-- Microphone -->
+    <path stroke="#2e7d32" d="M500 455 H600 M500 480 H600"/>
+  </g>
+
+  <!-- Junctions -->
+  <g fill="#d32f2f"><circle cx="360" cy="50" r="4.5"/><circle cx="900" cy="50" r="4.5"/></g>
+  <g fill="#222222"><circle cx="360" cy="600" r="4.5"/><circle cx="780" cy="600" r="4.5"/><circle cx="900" cy="600" r="4.5"/><circle cx="780" cy="495" r="4.5"/></g>
+  <circle cx="620" cy="410" r="4.5" fill="#ef6c00"/>
+
+  <!-- Schottky diode 1N5819: anode on the supply, cathode (bar) to the board -->
+  <path d="M346 82 H374 L360 108 Z" fill="#d32f2f"/>
+  <path d="M350 104 H344 V110 H376 V116 H370" fill="none" stroke="#d32f2f" stroke-width="3"/>
+  <text x="384" y="94" font-weight="bold">1N5819</text>
+  <text x="384" y="110" fill="#555555">Schottky; blocks USB 5 V from the LEDs</text>
+
+  <!-- Capacitor, + to 5 V -->
+  <path d="M1042 310 H1078" stroke="#d32f2f" stroke-width="3"/>
+  <path d="M1042 326 H1078" stroke="#222222" stroke-width="3"/>
+  <text x="1030" y="306" font-weight="bold" fill="#d32f2f">+</text>
+  <text x="1086" y="314" font-weight="bold">≥ 1000 µF</text>
+  <text x="1086" y="330" fill="#555555">≥ 10 V</text>
+
+  <!-- Resistor label -->
+  <text x="770" y="172" text-anchor="middle" font-weight="bold">330 Ω</text>
+
+  <!-- Rail labels -->
+  <text x="110" y="42" font-weight="bold" fill="#d32f2f">5 V</text>
+  <text x="110" y="622" font-weight="bold" fill="#222222">GND</text>
+
+  <!-- Boxes -->
+  <g fill="#f5f5f5" stroke="#444444" stroke-width="1.5">
+    <rect x="20" y="280" width="140" height="100" rx="6"/>
+    <rect x="300" y="170" width="200" height="360" rx="6"/>
+    <rect x="600" y="270" width="160" height="115" rx="6"/>
+    <rect x="600" y="430" width="160" height="80" rx="6"/>
+    <rect x="830" y="150" width="180" height="380" rx="6"/>
+  </g>
+
+  <!-- 5 V supply -->
+  <text x="90" y="325" text-anchor="middle" font-weight="bold">5 V supply</text>
+  <text x="90" y="343" text-anchor="middle" fill="#555555">sized for the LEDs</text>
+  <text x="100" y="298">+</text>
+  <text x="100" y="372">−</text>
+
+  <!-- ESP32 -->
+  <text x="400" y="236" text-anchor="middle" font-weight="bold">ESP32-WROOM-32</text>
+  <text x="400" y="252" text-anchor="middle" font-weight="bold">board</text>
+  <text x="310" y="300" fill="#555555">USB</text>
+  <text x="310" y="316" fill="#555555">(flash, debug)</text>
+  <text x="366" y="186">5V</text>
+  <text x="366" y="524">GND</text>
+  <g text-anchor="end">
+    <text x="492" y="194">GPIO 12</text>
+    <text x="492" y="294">GPIO 5</text>
+    <text x="492" y="319">GPIO 23</text>
+    <text x="492" y="344">GPIO 18</text>
+    <text x="492" y="369">GPIO 19</text>
+    <text x="492" y="414">3V3</text>
+    <text x="492" y="459">GPIO 14</text>
+    <text x="492" y="484">GPIO 32</text>
+  </g>
+
+  <!-- MPU-6500 -->
+  <text x="680" y="262" text-anchor="middle" font-weight="bold">MPU-6500 (SPI)</text>
+  <text x="608" y="294">NCS</text>
+  <text x="608" y="319">SDA (SDI)</text>
+  <text x="608" y="344">SCL (SCLK)</text>
+  <text x="608" y="369">AD0 (SDO)</text>
+  <text x="752" y="369" text-anchor="end">GND</text>
+  <text x="628" y="400">VCC</text>
+
+  <!-- Microphone -->
+  <text x="680" y="530" text-anchor="middle" font-weight="bold">Microphone</text>
+  <text x="680" y="546" text-anchor="middle" fill="#555555">not read by the firmware</text>
+  <text x="628" y="424">VDD</text>
+  <text x="752" y="499" text-anchor="end">GND</text>
+
+  <!-- LED strip -->
+  <text x="920" y="250" text-anchor="middle" font-weight="bold">WS2812B strip</text>
+  <text x="920" y="268" text-anchor="middle">500 LEDs, 100 / m</text>
+  <text x="920" y="300" text-anchor="middle" fill="#555555">spiral of ~12.7 turns</text>
+  <text x="920" y="318" text-anchor="middle" fill="#555555">40.5 LEDs a turn at the</text>
+  <text x="920" y="336" text-anchor="middle" fill="#555555">bottom, 38 at the top</text>
+  <text x="838" y="194">DIN</text>
+  <text x="906" y="168">5V</text>
+  <text x="906" y="524">GND</text>
+
+  <!-- Legend -->
+  <g transform="translate(20 645)" font-size="12">
+    <path d="M0 0 H24" stroke="#d32f2f" stroke-width="2.5"/><text x="30" y="4">5 V</text>
+    <path d="M80 0 H104" stroke="#ef6c00" stroke-width="2.5"/><text x="110" y="4">3.3 V</text>
+    <path d="M170 0 H194" stroke="#222222" stroke-width="2.5"/><text x="200" y="4">GND</text>
+    <path d="M260 0 H284" stroke="#1565c0" stroke-width="2.5"/><text x="290" y="4">LED data</text>
+    <path d="M370 0 H394" stroke="#6a1b9a" stroke-width="2.5"/><text x="400" y="4">IMU SPI</text>
+    <path d="M470 0 H494" stroke="#2e7d32" stroke-width="2.5"/><text x="500" y="4">Microphone (not read by the firmware)</text>
+  </g>
+</svg>

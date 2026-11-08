@@ -31,10 +31,24 @@ void frame_set_led(frame_t *f, int led, color_t color)
     f->rgb[led * 3 + 2] = color.b;
 }
 
-/* Turns from LED 0 to LED `led`. */
+/* LEDs per turn where the strip starts, and the change in it per turn
+ * on from there. */
+#define START_LEDS  (CAN_START_AT_TOP ? CAN_LEDS_PER_TURN_TOP : CAN_LEDS_PER_TURN_BOTTOM)
+#define END_LEDS    (CAN_START_AT_TOP ? CAN_LEDS_PER_TURN_BOTTOM : CAN_LEDS_PER_TURN_TOP)
+#define LEDS_CHANGE ((END_LEDS - START_LEDS) / CAN_TURNS)
+
+/* Turns from LED 0 to LED `led`. The LEDs up to t turns on number
+ * START_LEDS * t + LEDS_CHANGE * t^2 / 2; this solves that for t (in the
+ * form that stays exact when LEDS_CHANGE is 0). */
 static float turns(int led)
 {
-    return (float)led / CAN_LEDS_PER_TURN;
+    const float i = (float)led;
+    return 2.0f * i / (START_LEDS + sqrtf(START_LEDS * START_LEDS + 2.0f * LEDS_CHANGE * i));
+}
+
+float can_led_at_turns(float t)
+{
+    return START_LEDS * t + 0.5f * LEDS_CHANGE * t * t;
 }
 
 float can_led_angle(int led)
@@ -47,15 +61,16 @@ float can_led_angle(int led)
 
 float can_led_height(int led)
 {
-    const float up = (0.5f + turns(led)) * CAN_ROW_PITCH;
+    const float up = (0.5f + turns(led)) * CAN_ROW_PITCH_CELLS;
     return CAN_START_AT_TOP ? CAN_HEIGHT - up : up;
 }
 
 vec3_t can_led_pos(int led)
 {
     const float a = can_led_angle(led);
-    return v3(FLUID_NX / 2.0f + CAN_RADIUS * cosf(a), FLUID_NY / 2.0f + CAN_RADIUS * sinf(a),
-              can_led_height(led));
+    const float z = can_led_height(led);
+    const float r = can_radius_at(z);
+    return v3(FLUID_NX / 2.0f + r * cosf(a), FLUID_NY / 2.0f + r * sinf(a), z);
 }
 
 void can_view_init(can_view_t *v)
@@ -66,17 +81,53 @@ void can_view_init(can_view_t *v)
 void can_view_frame(can_view_t *v, const fluid_t *f, uint32_t hue, frame_t *frame)
 {
     frame_clear(frame);
-    const float r = CAN_RADIUS - SAMPLE_INSET;
     for (int i = 0; i < LED_COUNT; i++) {
         const float a = can_led_angle(i);
-        const vec3_t at =
-            v3(FLUID_NX / 2.0f + r * cosf(a), FLUID_NY / 2.0f + r * sinf(a), can_led_height(i));
+        const float z = can_led_height(i);
+        const float r = can_radius_at(z) - SAMPLE_INSET;
+        const vec3_t at = v3(FLUID_NX / 2.0f + r * cosf(a), FLUID_NY / 2.0f + r * sinf(a), z);
         float tint;
         const float density = fluid_sample(f, at, &tint);
         v->lit[i] = density >= (v->lit[i] ? LIGHT_OFF : LIGHT_ON);
         if (v->lit[i]) {
             const int h = (int)hue + 360 + (int)lrintf(tint);
             frame_set_led(frame, i, color_from_hue((uint32_t)h));
+        }
+    }
+}
+
+/* Calibration colours, at about the fluid's brightness. */
+static const color_t CAL_LINES[4] = {{60, 0, 0}, {0, 60, 0}, {0, 0, 60}, {30, 30, 0}};
+static const color_t CAL_DOWN = {20, 20, 20};
+/* Tilt (horizontal g) below which the white band stays off, and its half
+ * width. */
+#define CAL_MIN_TILT 0.1f
+#define CAL_BAND     (TWO_PI / 16.0f)
+
+/* Angle from `a` to `b`, in [-pi, pi). */
+static float angle_between(float a, float b)
+{
+    return fmodf(b - a + 1.5f * TWO_PI, TWO_PI) - 0.5f * TWO_PI;
+}
+
+void can_calibration_frame(frame_t *frame, vec3_t accel)
+{
+    frame_clear(frame);
+    const bool tilted = accel.x * accel.x + accel.y * accel.y > CAL_MIN_TILT * CAL_MIN_TILT;
+    const float down = atan2f(accel.y, accel.x);
+    for (int i = 0; i < LED_COUNT; i++) {
+        const float a = can_led_angle(i);
+        if (tilted && fabsf(angle_between(down, a)) < CAL_BAND) {
+            frame_set_led(frame, i, CAL_DOWN);
+        }
+        /* Half an LED's step round the turn at its height: one LED per
+         * turn falls within it. */
+        const float leds_per_turn = TWO_PI * CAN_CELL_LEDS * can_radius_at(can_led_height(i));
+        const float half_step = 0.5f * TWO_PI / leds_per_turn;
+        for (int q = 0; q < 4; q++) {
+            if (fabsf(angle_between(0.25f * TWO_PI * (float)q, a)) <= half_step) {
+                frame_set_led(frame, i, CAL_LINES[q]);
+            }
         }
     }
 }
