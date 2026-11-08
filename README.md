@@ -16,7 +16,7 @@ for ESP-IDF 6.1. The physics is a port of the fluid solver in
 | ESP32-WROOM-32 board | 4 MB flash |
 | MPU-6500 breakout | 3–5 V supply (on-board LDO), wired for SPI |
 | WS2812B strip, 500 LEDs | 100 per metre, wound in a spiral of about 12.7 turns (13 rows) round the can, each turn the same way round: about 40.5 LEDs a turn at the bottom, 38 at the top |
-| Microphone | On GPIO 14 and 32; wired, but the firmware does not read it |
+| I2S microphone (e.g. INMP441) | On GPIO 14, 15 and 32; wired, but the firmware does not read it |
 | 330 Ω resistor | In series with the data line, at the strip's input |
 | 1000 µF capacitor or more | Across 5 V and GND at the strip's input (10 V or more) |
 | 1N5819 Schottky diode | From the 5 V supply to the board's 5V pin, so USB cannot feed the strip or the supply |
@@ -25,6 +25,11 @@ for ESP-IDF 6.1. The physics is a port of the fluid solver in
 ## Wiring
 
 ![Wiring](docs/wiring.svg)
+
+On the board's pins (a 38-pin ESP32-WROOM-32 board, its pins as printed
+in its pinout picture):
+
+![Pinout](docs/pinout.svg)
 
 ### Power
 
@@ -67,6 +72,23 @@ SPI runs at 1 MHz, against 400 kHz for the board's I2C interface, so a
 frame's FIFO read takes a fraction of the time. The pins are settable in
 menuconfig. GPIO 5 is a strapping pin that has to be high at boot; NCS
 idles high, so it is.
+
+### I2S microphone
+
+| Microphone board | ESP32 |
+|---|---|
+| VDD | 3V3 |
+| GND | GND |
+| SCK | GPIO 14 (I2S bit clock) |
+| WS | GPIO 15 (I2S word select) |
+| SD | GPIO 32 (I2S data) |
+| L/R | GND (left channel) |
+
+The firmware does not read the microphone. These are the pins WLED's
+sound-reactive build uses on this can (`"digitalmic": {"type": 1,
+"pin": [32, 15, 14, -1]}`: SD, WS, SCK, no MCLK). GPIO 15 is a strapping
+pin that only silences the boot messages when low, so the microphone's
+WS line on it does no harm.
 
 ### The strip and the IMU
 
