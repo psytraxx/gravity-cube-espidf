@@ -14,7 +14,7 @@
     <path stroke="#222222" d="M360 530 V600"/>
     <path stroke="#222222" d="M900 530 V600"/>
     <path stroke="#222222" d="M1060 326 V600"/>
-    <path stroke="#222222" d="M760 365 H780 V600 M760 495 H780"/>
+    <path stroke="#222222" d="M760 340 H780 V600 M760 365 H780 M760 495 H780"/>
 
     <!-- 3V3 -->
     <path stroke="#ef6c00" d="M500 410 H620 M620 385 V430"/>
@@ -32,7 +32,7 @@
 
   <!-- Junctions -->
   <g fill="#d32f2f"><circle cx="360" cy="50" r="4.5"/><circle cx="900" cy="50" r="4.5"/></g>
-  <g fill="#222222"><circle cx="360" cy="600" r="4.5"/><circle cx="780" cy="600" r="4.5"/><circle cx="900" cy="600" r="4.5"/><circle cx="780" cy="495" r="4.5"/></g>
+  <g fill="#222222"><circle cx="360" cy="600" r="4.5"/><circle cx="780" cy="600" r="4.5"/><circle cx="900" cy="600" r="4.5"/><circle cx="780" cy="495" r="4.5"/><circle cx="780" cy="365" r="4.5"/></g>
   <circle cx="620" cy="410" r="4.5" fill="#ef6c00"/>
 
   <!-- Schottky diode 1N5819: anode on the supply, cathode (bar) to the board -->
@@ -90,11 +90,12 @@
   </g>
 
   <!-- MPU-6500 -->
-  <text x="680" y="262" text-anchor="middle" font-weight="bold">MPU-6500 (SPI)</text>
+  <text x="680" y="262" text-anchor="middle" font-weight="bold">MPU-92/65 (MPU-6500, SPI)</text>
   <text x="608" y="294">NCS</text>
   <text x="608" y="319">SDA (SDI)</text>
   <text x="608" y="344">SCL (SCLK)</text>
   <text x="608" y="369">AD0 (SDO)</text>
+  <text x="752" y="344" text-anchor="end">FSYNC</text>
   <text x="752" y="369" text-anchor="end">GND</text>
   <text x="628" y="400">VCC</text>
 

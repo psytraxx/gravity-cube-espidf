@@ -4,6 +4,7 @@
   <text x="20" y="30" font-weight="bold" font-size="15">ESP32-WROOM-32 board, 38 pins, as in its pinout picture</text>
   <path d="M628 110 H660 V75 H260" fill="none" stroke="#ef6c00" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M452 110 H260" fill="none" stroke="#222222" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M300 110 V190 H260" fill="none" stroke="#222222" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M452 138 H260" fill="none" stroke="#6a1b9a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M452 306 H260" fill="none" stroke="#6a1b9a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M452 334 H260" fill="none" stroke="#6a1b9a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -20,6 +21,7 @@
   <path d="M1040 650 H1090" fill="none" stroke="#d32f2f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M1040 680 H1090" fill="none" stroke="#222222" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   <circle cx="660" cy="110" r="4.5" fill="#ef6c00"/>
+  <circle cx="300" cy="110" r="4.5" fill="#222222"/>
   <circle cx="800" cy="474" r="4.5" fill="#222222"/>
   <rect x="500" y="56" width="80" height="34" fill="#e0e0e0" stroke="#444444" stroke-width="1.5"/>
   <text x="540" y="78" text-anchor="middle" fill="#555555" font-size="11">antenna</text>
@@ -103,10 +105,12 @@
   <circle cx="628" cy="614" r="5" fill="#222222"/>
   <text x="616" y="618" text-anchor="end" font-weight="bold">5V</text>
   <rect x="60" y="55" width="200" height="335" rx="6" fill="#f5f5f5" stroke="#444444" stroke-width="1.5"/>
-  <text x="160" y="230" text-anchor="middle" font-weight="bold">MPU-6500</text>
-  <text x="160" y="248" text-anchor="middle" fill="#555555">SPI</text>
+  <text x="160" y="230" text-anchor="middle" font-weight="bold">MPU-92/65 board</text>
+  <text x="160" y="248" text-anchor="middle" fill="#555555">MPU-6500, SPI</text>
+  <text x="160" y="410" text-anchor="middle" fill="#555555" font-size="12">EDA, ECL, INT: not connected</text>
   <text x="252" y="79" text-anchor="end">VCC</text>
   <text x="252" y="114" text-anchor="end">GND</text>
+  <text x="252" y="194" text-anchor="end">FSYNC</text>
   <text x="252" y="142" text-anchor="end">SDA (MOSI)</text>
   <text x="252" y="310" text-anchor="end">AD0 (MISO)</text>
   <text x="252" y="338" text-anchor="end">SCL (SCLK)</text>

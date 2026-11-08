@@ -14,7 +14,7 @@ for ESP-IDF 6.1. The physics is a port of the fluid solver in
 | Part | Notes |
 |---|---|
 | ESP32-WROOM-32 board | 4 MB flash |
-| MPU-6500 breakout | 3–5 V supply (on-board LDO), wired for SPI |
+| MPU-92/65 board | MPU-6500 (chip marked MP65), 3–5 V supply (on-board regulator), wired for SPI |
 | WS2812B strip, 500 LEDs | 100 per metre, wound in a spiral of about 12.7 turns (13 rows) round the can, each turn the same way round: about 40.5 LEDs a turn at the bottom, 38 at the top |
 | I2S microphone (e.g. INMP441) | On GPIO 32, 33 and 25; wired, but the firmware does not read it |
 | 330 Ω resistor | In series with the data line, at the strip's input |
@@ -57,7 +57,7 @@ wrong colours, add a 74AHCT125 level shifter.
 
 The IMU uses the ESP32's VSPI pins, together on one side of the board:
 
-| MPU-6500 board | ESP32 |
+| MPU-92/65 board | ESP32 |
 |---|---|
 | VCC | 3V3 |
 | GND | GND |
@@ -65,6 +65,12 @@ The IMU uses the ESP32's VSPI pins, together on one side of the board:
 | SDA (SDI / MOSI) | GPIO 23 (VSPI MOSI) |
 | AD0 (SDO / MISO) | GPIO 19 (VSPI MISO) |
 | NCS | GPIO 5 (VSPI CS) |
+| FSYNC | GND |
+| EDA, ECL, INT | not connected |
+
+FSYNC is unused and tied to GND so it does not float. EDA and ECL are an
+auxiliary I2C bus for a magnetometer, and INT an interrupt line; the
+firmware polls the FIFO instead.
 
 SPI runs at 1 MHz, against 400 kHz for the board's I2C interface, so a
 frame's FIFO read takes a fraction of the time. The pins are settable in
