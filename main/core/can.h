@@ -60,3 +60,10 @@ void can_view_frame(can_view_t *v, const fluid_t *f, uint32_t hue, float brightn
  * white band lights the side `accel` (in g, the way the fluid falls)
  * points to, under the lines. */
 void can_calibration_frame(frame_t *frame, vec3_t accel);
+
+/* Strip ruler, for counting LEDs on the can: LED 0 red, every 100th LED
+ * green, every 50th blue, every 10th white, the rest dark. The LED
+ * straight above (or below) LED 0 on the next turn is the number of LEDs
+ * in the first turn; the same next to the last LED gives the last turn's;
+ * which way the white marks run from LED 0 gives the winding direction. */
+void can_ruler_frame(frame_t *frame);

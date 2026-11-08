@@ -131,3 +131,13 @@ void can_calibration_frame(frame_t *frame, vec3_t accel)
         }
     }
 }
+
+void can_ruler_frame(frame_t *frame)
+{
+    static const color_t ZERO = {60, 0, 0}, HUNDRED = {0, 60, 0}, FIFTY = {0, 0, 60},
+                         TEN = {20, 20, 20};
+    frame_clear(frame);
+    for (int i = 0; i < LED_COUNT; i += 10) {
+        frame_set_led(frame, i, i == 0 ? ZERO : i % 100 == 0 ? HUNDRED : i % 50 == 0 ? FIFTY : TEN);
+    }
+}

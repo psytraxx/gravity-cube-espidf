@@ -42,6 +42,8 @@ config CAN_CALIBRATION
         from above if the winding direction is. Tilt the can and a white
         band lights the low side, where the fluid would run: if it lights
         the wrong side on an axis, flip that axis in MPU6500_AXIS_MAP.
+        A double tap switches to a ruler for counting LEDs (LED 0 red,
+        every 100th green, every 50th blue, every 10th white) and back.
 
 config CAN_TAP_THRESHOLD_MG
     int "Tap threshold (mg)"

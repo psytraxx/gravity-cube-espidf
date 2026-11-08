@@ -144,6 +144,23 @@ fluid* in menuconfig. After the LED test the can shows, for good:
   would run. If it lights the opposite side on one axis, flip that axis
   in `MPU6500_AXIS_MAP`.
 
+A double tap switches to the strip ruler and back: LED 0 red, every
+100th LED green, every 50th blue, every 10th white. Read the geometry
+off it:
+
+- **LEDs in the first turn:** the LED straight above (or below) LED 0,
+  one row on. Count from the white mark next to it, e.g. two past the
+  40 mark is 42.
+- **LEDs in the last turn:** the same next to the strip's last LED,
+  counted back to the LED straight beside it one row back.
+- **Where the data enters:** the row LED 0 is in, top or bottom.
+- **Winding direction:** the way the marks run from LED 0, seen from
+  above.
+
+Set `CAN_LEDS_PER_TURN_BOTTOM`, `CAN_LEDS_PER_TURN_TOP`,
+`CAN_START_AT_TOP` and `CAN_CLOCKWISE` from them; the lines then stand
+straight.
+
 The monitor logs the acceleration and the low side's angle every 100
 frames. Updates over Wi-Fi keep working while it runs.
 

@@ -97,14 +97,19 @@ static void led_test(void)
 
 #if CONFIG_CAN_CALIBRATION
 /* Show the calibration picture for good, the white band following the
- * IMU. The image counts as working once the picture is out, so updates
- * over Wi-Fi keep it. */
+ * IMU; a double tap switches between it and the strip ruler. The image
+ * counts as working once the picture is out, so updates over Wi-Fi keep
+ * it. */
 static void calibration(bool have_imu)
 {
     ESP_LOGI(TAG, "Calibration: red +x (LED 0), green +y, blue -x, yellow -y; "
-                  "white on the low side");
+                  "white on the low side. Double-tap for the ruler.");
     static imu_sample_t samples[MAX_SAMPLES];
     static frame_t frame;
+    tap_detector_t taps;
+    tap_init(&taps, CONFIG_CAN_TAP_THRESHOLD_MG / 1000.0f);
+    int64_t sample_ms = 0;
+    bool ruler = false;
     vec3_t accel = v3(0.0f, 0.0f, -1.0f);
     uint32_t loops = 0;
     TickType_t wake = xTaskGetTickCount();
@@ -113,11 +118,23 @@ static void calibration(bool have_imu)
         if (n > 0) {
             vec3_t sum = v3(0.0f, 0.0f, 0.0f);
             for (int i = 0; i < n; i++) {
+                sample_ms += MPU6500_SAMPLE_MS;
+                if (tap_feed(&taps, samples[i].accel, sample_ms)) {
+                    ruler = !ruler;
+                    ESP_LOGI(TAG, "%s",
+                             ruler ? "Ruler: LED 0 red, every 100th green, every 50th "
+                                     "blue, every 10th white"
+                                   : "Calibration lines and tilt band");
+                }
                 sum = v3_add(sum, samples[i].accel);
             }
             accel = v3_scale(sum, 1.0f / (float)n);
         }
-        can_calibration_frame(&frame, accel);
+        if (ruler) {
+            can_ruler_frame(&frame);
+        } else {
+            can_calibration_frame(&frame, accel);
+        }
         xQueueSend(s_frames, &frame, portMAX_DELAY);
         if (++loops == 1) {
             ota_app_ok();
