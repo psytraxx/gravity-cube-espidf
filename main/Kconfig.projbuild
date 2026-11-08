@@ -15,8 +15,8 @@ config CAN_FRAME_MS
     help
         One physics step per period. The physics constants are per step,
         so a longer period slows the fluid down. The strip needs about
-        15 ms per frame, and a fluid step about as long as on the cube
-        firmware (17 ms on an ESP32-S3); the status log shows both.
+        15 ms per frame, and a fluid step about as long; the status log
+        shows both. Raise the period if the physics runs over it.
 
 config CAN_LED_TEST
     bool "LED test at power on"

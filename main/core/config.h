@@ -26,7 +26,7 @@
 
 /* Size of a fluid cell, in LED spacings. The fluid's cost grows with the
  * cube of 1 / CAN_CELL_LEDS; 1.4 gives the can about 60 cells a layer
- * and a cell about every 2 rows, at about the cube firmware's cost per step. */
+ * and a cell about every 2 rows, and a step of about the 18 ms frame. */
 #define CAN_CELL_LEDS 1.4f
 
 /* Turns of the spiral: the LEDs per turn change evenly from one end to

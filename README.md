@@ -1,14 +1,14 @@
 # Gravity can (ESP-IDF)
 
 Firmware for a can of light: a WS2812B strip wound in a spiral round a
-cylinder (a hat's crown) shows the liquid inside it. Tilt the can and the surface tilts;
-shake it and the fluid sloshes; lay it on its side and the fluid runs
-along the low side. Its brightness pulses with the sound around it, and
-a double tap gives the fluid a new, random colour.
+cylinder (here a hat's crown) shows the liquid inside it. Tilt the can
+and the surface tilts; shake it and the fluid sloshes; lay it on its
+side and the fluid runs along the low side. Its brightness pulses with
+the sound around it, and a double tap gives the fluid a new, random
+colour.
 
 It runs on an ESP32-WROOM-32 with an MPU-6500 IMU and an I2S
-microphone, and is written in C
-for ESP-IDF 6.1. The physics is a port of the fluid solver in
+microphone, and is written in C for ESP-IDF 6.1. The physics is a port of the fluid solver in
 [gravity-cube-rs](https://github.com/psytraxx/gravity-cube-rs).
 
 ## Hardware
@@ -98,74 +98,32 @@ sound-reactive build the same wiring is `"digitalmic": {"type": 1,
 "pin": [32, 25, 33, -1]}` (SD, WS, SCK, no MCLK), with the LEDs on
 GPIO 13.
 
-### The strip and the IMU
+### The strip's geometry
 
-The strip's geometry is in [`main/core/config.h`](main/core/config.h):
-500 LEDs, 39 a turn at the bottom and 36.8 at the top, the data
-entering at the bottom and the strip
-winding clockwise seen from above. For another can, read the numbers
-off with the ruler (below) and set:
+The firmware places every LED from a few numbers in
+[`main/core/config.h`](main/core/config.h); [Setting up a
+can](#setting-up-a-can) shows how to read them off. For this hat:
 
-| Setting | Default | |
+| Setting | Value | |
 |---|---|---|
 | `CAN_LEDS_PER_TURN_BOTTOM` | 39 | LEDs in the bottom turn |
-| `CAN_LEDS_PER_TURN_TOP` | 36.8 | LEDs in the top turn; fewer than at the bottom for a can that narrows |
-| `CAN_LED_SPACING_MM` | 10.0 | Distance between two LEDs along the strip (100 LEDs per metre) |
-| `CAN_ROW_PITCH` | 0.65 | Distance between two turns, divided by the LED spacing |
+| `CAN_LEDS_PER_TURN_TOP` | 36.8 | LEDs in the top turn; fewer than at the bottom where the can narrows |
+| `CAN_ROW_PITCH` | 0.65 | Distance between two turns, divided by the distance between two LEDs along the strip |
+| `CAN_LED_SPACING_MM` | 10 | Distance between two LEDs along the strip; sets how fast the fluid moves |
 | `CAN_START_AT_TOP` | 0 | 1 if the data enters at the top turn |
 | `CAN_CLOCKWISE` | 1 | 1 if the strip winds clockwise seen from above |
 
 The LEDs per turn change evenly from bottom to top, so a can that
 narrows works too; from 39 down to 36.8 a turn, 500 LEDs make about
-13 turns. The
-can's radius at each height follows from its LEDs per turn there.
+13 turns. The can's radius at each height follows from its LEDs per turn
+there. The grid round the can (`FLUID_NX`, `FLUID_NY`, `FLUID_NZ`) has
+to hold it: the host tests check, and fail if a new geometry needs a
+bigger grid.
 
-The grid round the can (`FLUID_NX`, `FLUID_NY`, `FLUID_NZ`) has to hold
-it: the host tests check, and say so if a new row pitch needs a taller
-grid.
-
-The IMU board lies flat on the can's lid or floor with its Z axis
-pointing up and its X axis pointing at LED 0, which the LED test shows
-(below). Mounted any other way, edit `MPU6500_AXIS_MAP` in
-[`main/core/mpu6500_decode.h`](main/core/mpu6500_decode.h): if tilting
-moves the fluid the wrong way on an axis, flip that axis' sign. If the
-fluid is mirrored (tilting towards one side raises the fluid on the
-other), the strip winds the other way: flip `CAN_CLOCKWISE`.
-
-### Calibration picture
-
-For setting all this up, turn on *Calibration picture instead of the
-fluid* in menuconfig. After the LED test the can shows, for good:
-
-- four coloured lines up the can, one LED per turn each: red at LED 0's
-  angle (the IMU's +X), then green, blue and yellow a quarter turn apart.
-  Straight lines mean the LEDs per turn are right; red, green, blue,
-  yellow counter-clockwise seen from above means the winding direction
-  is. A line leaning one way means too few LEDs per turn at that end,
-  the other way too many.
-- a white band, while the can tilts, on its low side: where the fluid
-  would run. If it lights the opposite side on one axis, flip that axis
-  in `MPU6500_AXIS_MAP`.
-
-A double tap switches to the strip ruler and back: LED 0 red, every
-100th LED green, every 50th blue, every 10th white. Read the geometry
-off it:
-
-- **LEDs in the first turn:** the LED straight above (or below) LED 0,
-  one row on. Count from the white mark next to it, e.g. two past the
-  40 mark is 42.
-- **LEDs in the last turn:** the same next to the strip's last LED,
-  counted back to the LED straight beside it one row back.
-- **Where the data enters:** the row LED 0 is in, top or bottom.
-- **Winding direction:** the way the marks run from LED 0, seen from
-  above.
-
-Set `CAN_LEDS_PER_TURN_BOTTOM`, `CAN_LEDS_PER_TURN_TOP`,
-`CAN_START_AT_TOP` and `CAN_CLOCKWISE` from them; the lines then stand
-straight.
-
-The monitor logs the acceleration and the low side's angle every 100
-frames. Updates over Wi-Fi keep working while it runs.
+The IMU board lies flat on the can's lid or floor, chip side up, with
+its X axis pointing at LED 0. Mounted any other way, edit
+`MPU6500_AXIS_MAP` in
+[`main/core/mpu6500_decode.h`](main/core/mpu6500_decode.h).
 
 ## Build and flash
 
@@ -180,18 +138,68 @@ idf.py -p /dev/ttyUSB0 flash monitor
 ```
 
 At power on, before the fluid starts, the strip fills green from the
-data input, five LEDs at a time (about 2 s): a dark LED, or every LED from one
-point on, shows a dead LED or a broken strip. Then one LED per turn
-lights, the one nearest LED 0's angle, for 2 s. They make a straight
-line up the can if the LEDs per turn are right; a line that leans means
-they are off. The line also marks where the IMU's X axis has to
-point.
+data input, five LEDs at a time (about 2 s): a dark LED, or every LED
+from one point on, shows a dead LED or a broken strip. Then one LED per
+turn lights, the one nearest LED 0's angle, for 2 s: a straight line up
+the can if the LEDs per turn are right, and where the IMU's X axis
+points.
 
 Keep the can still from the end of the LED test until a second later:
 the gyro calibrates its zero offset then.
 
 The monitor logs a status line every 100 frames: acceleration,
-rotation rate, and the physics, frame and LED send times.
+rotation rate, sound level and brightness, and the physics, frame and
+LED send times.
+
+## Setting up a can
+
+The firmware has to know where every LED sits and how the IMU lies. For
+a new can, or after rewinding the strip:
+
+1. **Calibration picture on.** In `idf.py menuconfig` → *Gravity can*,
+   turn on *Calibration picture instead of the fluid*, then build and
+   flash. After the LED test the can shows four coloured lines; a double
+   tap switches to a ruler and back. Updates over Wi-Fi keep working, so
+   the steps below can be flashed over the network.
+2. **Read the strip off the ruler.** It lights LED 0 red, every 100th
+   LED green, every 50th blue and every 10th white. Note:
+   - the turn LED 0 is in, bottom or top: `CAN_START_AT_TOP`;
+   - which way the marks run from LED 0, seen from above:
+     `CAN_CLOCKWISE`;
+   - the LED straight above (or below) LED 0, one row on, counted from
+     the white mark before it (two past the 30 mark is 32): the LEDs in
+     the first turn;
+   - the LED straight beside the strip's last LED, one row back,
+     subtracted from the last LED's number: the LEDs in the last turn;
+   - the distance between two rows over the distance between two LEDs
+     along the strip: `CAN_ROW_PITCH`;
+   - 1000 over the strip's LEDs per metre: `CAN_LED_SPACING_MM`.
+
+   Set them in [`main/core/config.h`](main/core/config.h), run the host
+   tests (they fail if the grid needs to grow), build and flash.
+3. **Straighten the lines.** Four lines run up the can, one LED per
+   turn: red at LED 0's angle, then green, blue and yellow a quarter turn
+   apart, counter-clockwise seen from above. Where the LEDs per turn are
+   not a whole number they step half an LED from side to side; past that
+   they should stand straight. Follow a line from LED 0's end: where it
+   drifts the way the strip runs, the LEDs per turn set there are too
+   many; where it drifts against it, too few. Drift that grows only
+   towards the far end means the far turns are shorter or longer than
+   the near ones: change the count at that end. Over 13 turns, 0.1 LED
+   more a turn at one end moves the far end of the line about 0.65 LEDs,
+   at both ends about 1.3. Counting by hand is seldom exact; a few rounds
+   of looking at the lines settle it.
+4. **Mount and check the IMU.** Lay the board flat on the can's lid or
+   floor, chip side up, its X arrow pointing at LED 0 (the bottom of the
+   red line on this hat). Tilt the can: a white band lights its low
+   side, where the fluid would run. If it lights the opposite side for
+   one tilt direction, flip that axis' sign in `MPU6500_AXIS_MAP` in
+   [`main/core/mpu6500_decode.h`](main/core/mpu6500_decode.h).
+5. **Calibration picture off.** Build and flash: the fluid.
+
+This hat came out at LED 0 on the brim, winding clockwise, 39 LEDs a
+turn at the brim and 36.8 at the top (straightened with the lines), and
+rows 0.65 LED spacings apart.
 
 ## Updates over Wi-Fi
 
@@ -255,7 +263,7 @@ Without a token, anyone on the network can reflash the can.
 | LED data GPIO | 13 | |
 | Physics step period | 18 ms | The physics constants are per step |
 | LED test at power on | on | Fills the strip, then shows LED 0's line up the can (~4 s) |
-| Calibration picture | off | Instead of the fluid: lines for the geometry, a band for the IMU |
+| Calibration picture | off | Instead of the fluid: lines for the geometry, a band for the IMU, a ruler on a double tap; see [Setting up a can](#setting-up-a-can) |
 | Tap threshold | 1000 mg | Raise it if sloshing changes the colour, lower it if taps are missed |
 | IMU SPI pins | 23, 19, 18, 5 | MOSI, MISO, SCLK, CS |
 | I2C scan at startup | off | Wiring check: probes the IMU pins as I2C; finds the MPU-6500 at 0x68/0x69 after a power on |
@@ -289,7 +297,8 @@ step and builds the frame. **Core 1** sends frames to the strip with
 Espressif's [led_strip](https://components.espressif.com/components/espressif/led_strip)
 component over RMT (~15 ms for 500 LEDs); the two overlap, and core 0
 only waits if core 1 is still sending. Unchanged frames are not re-sent,
-so a settled can keeps the data line quiet.
+so a settled can in the quiet, or with no microphone, keeps the data
+line quiet.
 
 **IMU.** The MPU-6500 samples accelerometer (±4 g) and gyro (±1000 °/s)
 at 250 Hz into its FIFO. Each frame uses the mean acceleration and the
@@ -327,8 +336,9 @@ beats over loud music still pulse.
 staggered grid of 9 × 9 × 7 cells, each 1.4 LED spacings across, about
 2 rows high (coarser cells would look blockier, finer ones cost too
 much time on an ESP32). The can is the cells whose centres lie within
-its radius at their height and below its top: 61 per layer, 7 layers, as round as cells that size
-allow; its walls are their outer faces. Faces with no cell of the can on either
+its radius at their height and below its top: 7 layers of 61 cells,
+narrowing to 57 at the top, as round as cells that size allow; its
+walls are their outer faces. Faces with no cell of the can on either
 side take no part, as faces beyond the grid's edge do. Each step the
 particles take gravity and the forces of the turning can (Euler,
 Coriolis, centrifugal), hand their velocity to the grid, and a
@@ -343,14 +353,14 @@ fluid: it moves where it has a free surface to move into. Spun about
 its axis, the fluid mostly stays put while the can turns round it, as
 liquid in a glass does at first.
 
-**LEDs.** Each LED's place on the spiral follows from its index: the LEDs
-per turn change evenly from 39 at the bottom to 36.8 at the top, so LED
-*i* sits where the LEDs counted so far reach *i*, clockwise from LED 0
-and climbing a row a turn, on the circle of the can's radius at that
-height. It shows the fluid half a cell
-inside the wall in front of it, blended from the nearest cell centres:
-it lights once the density there reaches 1.0 and goes dark below 0.4, so
-a still surface does not flicker. Because the spiral climbs a little
+**LEDs.** Each LED's place on the spiral follows from its index: the
+LEDs per turn change evenly from 39 at the bottom to 36.8 at the top, so
+LED *i* sits where the LEDs counted so far reach *i*, clockwise from
+LED 0 and climbing a row a turn, on the circle of the can's radius at
+that height. It shows the fluid half a cell inside the wall in front of
+it, blended from the nearest cell centres: it lights once the density
+there reaches 1.0 and goes dark below 0.4, so a still surface does not
+flicker. Because the spiral climbs a little
 with every LED, a tilted surface shows as a smooth slanted line rather
 than steps.
 
@@ -378,4 +388,5 @@ cmake -S test/host -B build-host && cmake --build build-host
 ctest --test-dir build-host --output-on-failure
 ```
 
-CI runs them and builds the firmware on every push to this branch.
+CI runs them and builds the firmware for the ESP32 on every push and
+pull request.
