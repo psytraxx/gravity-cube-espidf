@@ -168,10 +168,10 @@ static void test_panel_led_covers_its_panel(void)
     check_panel_led_covers_its_panel();
 }
 
-static void test_rows_side_panel_test_fills_in_chain_order(void)
+static void test_rows_side_panel_runs_in_chain_order(void)
 {
-    /* The panel test, bottom left row by row, walks a side panel's
-     * chain from IN to OUT. */
+    /* With rows wiring, a side panel's LEDs bottom left row by row are
+     * its chain from IN to OUT. */
     panel_set_wiring(PANEL_WIRING_ROWS);
     for (int p = 0; p < 4; p++) {
         for (uint8_t row = 0; row < 8; row++) {
@@ -234,7 +234,7 @@ int main(void)
     RUN_TEST(test_inner_voxel_lights_nothing);
     RUN_TEST(test_frame_set_lights_every_face);
     RUN_TEST(test_panel_led_covers_its_panel);
-    RUN_TEST(test_rows_side_panel_test_fills_in_chain_order);
+    RUN_TEST(test_rows_side_panel_runs_in_chain_order);
     RUN_TEST(test_panel_led_is_seen_from_outside);
     RUN_TEST(test_panel_cell_is_under_its_led);
     RUN_TEST(test_decode_rest_and_spin);

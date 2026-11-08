@@ -122,20 +122,11 @@ idf.py build
 idf.py -p /dev/ttyACM0 flash monitor
 ```
 
-At power on, before the fluid starts, each panel in chain order (Left,
-Back, Right, Front, Bottom, Top) fills green LED by LED: from the bottom
-left as seen from outside, row by row, to the top right, about 0.8 s a
-panel. The sides fill upright, Top and Bottom as in the unfolded cross
-(Front edge at the bottom of Top, at the top of Bottom). A dark LED or
-panel is dead or badly connected; if every panel from one point on stays
-dark, the chain is broken at the link before the first dark one.
-
 ### Assembly pattern
 
 To check that every panel sits on its face the right way round while
 putting the cube together, turn on *Assembly pattern instead of the
-fluid* in menuconfig. After the panel test the cube then shows a still
-pattern for good:
+fluid* in menuconfig. The cube then shows a still pattern for good:
 
 - The 4x4 centre of each panel glows in that panel's own colour.
 - Each edge strip (corners dark) glows in the colour of the panel on the
@@ -156,8 +147,8 @@ centre colour means a panel on the wrong face; edge colours on the wrong
 sides mean a panel turned or flipped. The monitor logs the colour table
 at startup. Turn the option off again for the fluid.
 
-Keep the cube still from the end of the panel test until a second later:
-the gyro calibrates its zero offset then.
+Keep the cube still for the first second after power on: the gyro
+calibrates its zero offset then.
 
 The monitor logs a status line every 100 frames: acceleration,
 rotation rate, and the physics, frame and LED send times.
@@ -220,7 +211,6 @@ Without a token, anyone on the network can reflash the cube.
 |---|---|---|
 | LED data GPIO | 2 | |
 | Panel wiring | Rows | Rows or zigzag columns, see [LEDs](#leds) |
-| Panel test at power on | on | Each panel fills green LED by LED, in chain order (~5 s) |
 | Physics step period | 18 ms | The physics constants are per step; a fluid step takes ~17 ms, so 18 ms (55 fps) is the shortest it keeps up with |
 | Assembly pattern | off | A still pattern instead of the fluid, for putting the panels in, see [Assembly pattern](#assembly-pattern) |
 | Tap threshold | 1000 mg | In 125 mg steps. Raise it if sloshing changes the colour, lower it if taps are missed |

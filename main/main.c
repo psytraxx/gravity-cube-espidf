@@ -36,10 +36,6 @@ static const char *TAG = "cube";
 
 #define LOG_EVERY 100
 
-/* One LED per step; a frame takes ~11.5 ms to send. */
-#define PANEL_TEST_STEP_MS 12
-#define PANEL_TEST_COLOR   ((color_t){0, 60, 0})
-
 /* Frames from core 0 to core 1. One slot. */
 static QueueHandle_t s_frames;
 /* Duration of the last LED send, for the status log. */
@@ -62,28 +58,6 @@ static void led_task(void *arg)
         s_led_send_us = esp_timer_get_time() - start;
     }
 }
-
-#if CONFIG_CUBE_PANEL_TEST
-/* Each panel in turn, chain order, fills green LED by LED: from the
- * bottom left, row by row, to the top right. Then all off. */
-static void panel_test(void)
-{
-    static frame_t frame;
-    for (int p = 0; p < PANEL_COUNT; p++) {
-        ESP_LOGI(TAG, "Panel test: %d %s", p, panel_name(p));
-        frame_clear(&frame);
-        for (uint8_t row = 0; row < CUBE_SIZE; row++) {
-            for (uint8_t col = 0; col < CUBE_SIZE; col++) {
-                frame_set_panel_led(&frame, p, col, row, PANEL_TEST_COLOR);
-                xQueueSend(s_frames, &frame, portMAX_DELAY);
-                vTaskDelay(pdMS_TO_TICKS(PANEL_TEST_STEP_MS));
-            }
-        }
-    }
-    frame_clear(&frame);
-    xQueueSend(s_frames, &frame, portMAX_DELAY);
-}
-#endif
 
 #if CONFIG_CUBE_ASSEMBLY_PATTERN
 /* Show the assembly pattern for good. The image counts as working once
@@ -114,15 +88,11 @@ void app_main(void)
     panel_set_wiring(PANEL_WIRING_ZIGZAG);
 #endif
 
-    /* Joins Wi-Fi during the panel test. */
+    /* Joins Wi-Fi on core 1 while the rest starts up. */
     ota_start();
 
     s_frames = xQueueCreate(1, sizeof(frame_t));
     xTaskCreatePinnedToCore(led_task, "leds", 4096, NULL, 5, NULL, 1);
-
-#if CONFIG_CUBE_PANEL_TEST
-    panel_test();
-#endif
 
 #if CONFIG_CUBE_ASSEMBLY_PATTERN
     assembly_pattern();
