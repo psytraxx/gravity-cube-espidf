@@ -116,18 +116,21 @@ void can_calibration_frame(frame_t *frame, vec3_t accel)
     const bool tilted = accel.x * accel.x + accel.y * accel.y > CAL_MIN_TILT * CAL_MIN_TILT;
     const float down = atan2f(accel.y, accel.x);
     for (int i = 0; i < LED_COUNT; i++) {
-        const float a = can_led_angle(i);
-        if (tilted && fabsf(angle_between(down, a)) < CAL_BAND) {
+        if (tilted && fabsf(angle_between(down, can_led_angle(i))) < CAL_BAND) {
             frame_set_led(frame, i, CAL_DOWN);
         }
-        /* Half an LED's step round the turn at its height: one LED per
-         * turn falls within it. */
-        const float leds_per_turn = TWO_PI * CAN_CELL_LEDS * can_radius_at(can_led_height(i));
-        const float half_step = 0.5f * TWO_PI / leds_per_turn;
-        for (int q = 0; q < 4; q++) {
-            if (fabsf(angle_between(0.25f * TWO_PI * (float)q, a)) <= half_step) {
-                frame_set_led(frame, i, CAL_LINES[q]);
+    }
+    /* Each line's angle is a share of a turn from LED 0, the other way
+     * round when the strip winds clockwise; on every turn the LED nearest
+     * it lights. */
+    for (int q = 0; q < 4; q++) {
+        const float share = CAN_CLOCKWISE ? (float)((4 - q) % 4) / 4.0f : (float)q / 4.0f;
+        for (int k = 0;; k++) {
+            const int led = (int)floorf(can_led_at_turns((float)k + share) + 0.5f);
+            if (led >= LED_COUNT) {
+                break;
             }
+            frame_set_led(frame, led, CAL_LINES[q]);
         }
     }
 }

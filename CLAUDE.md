@@ -5,7 +5,7 @@ Project guidance for Claude Code working in this repository.
 ## What this is
 
 ESP-IDF 6.1 firmware in C for a "gravity can": a 500-LED WS2812B strip
-wound in a spiral round a slightly conical cylinder, on an
+wound in a spiral round a cylinder (a hat's crown), on an
 ESP32-WROOM-32 with an MPU-6500 IMU and an I2S microphone. README.md
 describes the hardware, wiring and design.
 

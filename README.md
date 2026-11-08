@@ -1,7 +1,7 @@
 # Gravity can (ESP-IDF)
 
 Firmware for a can of light: a WS2812B strip wound in a spiral round a
-slightly conical cylinder shows the liquid inside it. Tilt the can and the surface tilts;
+cylinder (a hat's crown) shows the liquid inside it. Tilt the can and the surface tilts;
 shake it and the fluid sloshes; lay it on its side and the fluid runs
 along the low side. Its brightness pulses with the sound around it, and
 a double tap gives the fluid a new, random colour.
@@ -17,7 +17,7 @@ for ESP-IDF 6.1. The physics is a port of the fluid solver in
 |---|---|
 | ESP32-WROOM-32 board | 4 MB flash |
 | MPU-92/65 board | MPU-6500 (chip marked MP65), 3–5 V supply (on-board regulator), wired for SPI |
-| WS2812B strip, 500 LEDs | 100 per metre, wound in a spiral of about 12.7 turns (13 rows) round the can, each turn the same way round: about 40.5 LEDs a turn at the bottom, 38 at the top |
+| WS2812B strip, 500 LEDs | Wound clockwise (seen from above) in a spiral of 39 LEDs a turn, about 12.8 turns (13 rows), from the bottom up |
 | I2S microphone (e.g. INMP441) | On GPIO 32, 33 and 25; its sound pulses the brightness |
 | 330 Ω resistor | In series with the data line, at the strip's input |
 | 1000 µF capacitor or more | Across 5 V and GND at the strip's input (10 V or more) |
@@ -101,21 +101,22 @@ GPIO 13.
 ### The strip and the IMU
 
 The strip's geometry is in [`main/core/config.h`](main/core/config.h):
-500 LEDs, the data entering at the bottom and the strip winding
-counter-clockwise seen from above. Measure the can and set:
+500 LEDs, 39 a turn, the data entering at the bottom and the strip
+winding clockwise seen from above. For another can, read the numbers
+off with the ruler (below) and set:
 
 | Setting | Default | |
 |---|---|---|
-| `CAN_LEDS_PER_TURN_BOTTOM` | 40.5 | LEDs in the bottom turn |
-| `CAN_LEDS_PER_TURN_TOP` | 38.0 | LEDs in the top turn |
+| `CAN_LEDS_PER_TURN_BOTTOM` | 39 | LEDs in the bottom turn |
+| `CAN_LEDS_PER_TURN_TOP` | 39 | LEDs in the top turn; fewer than at the bottom for a can that narrows |
 | `CAN_LED_SPACING_MM` | 10.0 | Distance between two LEDs along the strip (100 LEDs per metre) |
-| `CAN_ROW_PITCH` | 1.2 | Distance between two turns, divided by the LED spacing |
+| `CAN_ROW_PITCH` | 0.8 | Distance between two turns, divided by the LED spacing |
 | `CAN_START_AT_TOP` | 0 | 1 if the data enters at the top turn |
-| `CAN_CLOCKWISE` | 0 | 1 if the strip winds clockwise seen from above |
+| `CAN_CLOCKWISE` | 1 | 1 if the strip winds clockwise seen from above |
 
-The LEDs per turn change evenly from bottom to top; with 500 LEDs that
-makes about 12.7 turns. The can's radius at each height follows from its
-LEDs per turn there.
+The LEDs per turn change evenly from bottom to top, so a can that
+narrows works too; at 39 a turn, 500 LEDs make about 12.8 turns. The
+can's radius at each height follows from its LEDs per turn there.
 
 The grid round the can (`FLUID_NX`, `FLUID_NY`, `FLUID_NZ`) has to hold
 it: the host tests check, and say so if a new row pitch needs a taller
@@ -321,12 +322,11 @@ flashes the fluid, steady noise settles back to dim within seconds, and
 beats over loud music still pulse.
 
 **Fluid.** An incompressible FLIP fluid: inviscid Navier-Stokes on a
-staggered grid of 8 × 8 × 10 cells, each 1.75 LED spacings across
-(coarser cells would look blockier, finer ones cost too much time on an
-ESP32). The can is the cells whose centres lie within its radius at
-their height: 44 per layer at the bottom, 32 near the top, so it is as
-round, and narrows as it climbs, as far as cells that size allow; its
-walls are their outer faces. Faces with no cell of the can on either
+staggered grid of 9 × 9 × 8 cells, each 1.4 LED spacings across, about
+1.75 rows high (coarser cells would look blockier, finer ones cost too
+much time on an ESP32). The can is the cells whose centres lie within
+its radius at their height: 61 per layer, as round as cells that size
+allow; its walls are their outer faces. Faces with no cell of the can on either
 side take no part, as faces beyond the grid's edge do. Each step the
 particles take gravity and the forces of the turning can (Euler,
 Coriolis, centrifugal), hand their velocity to the grid, and a
@@ -334,17 +334,18 @@ Gauss-Seidel pressure solve (60 passes) makes the flow divergence-free
 against the walls. The particles take back the change (80 % FLIP, 20 %
 PIC to damp noise), move, and are pushed apart so they stay evenly
 spread; cells packed above two particles get a little outflow, so the
-fluid keeps its volume. About 440 particles fill the bottom half.
+fluid keeps its volume. About 490 particles fill the bottom half.
 
 A can is closed and narrow, so shoving it sideways only presses on the
 fluid: it moves where it has a free surface to move into. Spun about
 its axis, the fluid mostly stays put while the can turns round it, as
 liquid in a glass does at first.
 
-**LEDs.** Each LED's place on the spiral follows from its index: the
-LEDs per turn change evenly from 40.5 at the bottom to 38 at the top, so
-LED *i* sits where the LEDs counted so far reach *i*, and on the circle
-of the can's radius at that height. It shows the fluid half a cell
+**LEDs.** Each LED's place on the spiral follows from its index: at 39
+LEDs a turn, LED *i* sits *i* / 39 of the way round from LED 0
+(clockwise) and as many rows up, on the circle of the can's radius at
+that height. With LEDs per turn that change from bottom to top, it sits
+where the LEDs counted so far reach *i*. It shows the fluid half a cell
 inside the wall in front of it, blended from the nearest cell centres:
 it lights once the density there reaches 1.0 and goes dark below 0.4, so
 a still surface does not flicker. Because the spiral climbs a little

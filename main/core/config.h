@@ -1,8 +1,8 @@
 /* The can's geometry, and the fluid's particle count and colour.
  *
- * The can is an LED strip wound in a spiral round a slightly conical
- * cylinder, each turn the same way round: turns get shorter as they
- * climb. The fluid runs on a grid of cells CAN_CELL_LEDS LED spacings
+ * The can is an LED strip wound in a spiral round a cylinder, each turn
+ * the same way round; a can that narrows has fewer LEDs in its upper
+ * turns. The fluid runs on a grid of cells CAN_CELL_LEDS LED spacings
  * across, FLUID_NX x FLUID_NY x FLUID_NZ, with the can's axis up the
  * middle. Heights and radii below are in cells unless named otherwise. */
 #pragma once
@@ -12,22 +12,22 @@
 
 #define CAN_LED_COUNT 500
 /* LEDs in one turn at the bottom and at the top. */
-#define CAN_LEDS_PER_TURN_BOTTOM 40.5f
-#define CAN_LEDS_PER_TURN_TOP    38.0f
+#define CAN_LEDS_PER_TURN_BOTTOM 39.0f
+#define CAN_LEDS_PER_TURN_TOP    39.0f
 /* Distance between two LEDs along the strip (100 LEDs per metre). */
 #define CAN_LED_SPACING_MM 10.0f
 /* Height of one turn, in LED spacings: the distance between two rows
  * divided by the distance between two LEDs along the strip. */
-#define CAN_ROW_PITCH 1.2f
+#define CAN_ROW_PITCH 0.8f
 /* Where the data enters (1: the top turn, 0: the bottom one), and which
  * way the strip winds seen from above (1: clockwise). */
 #define CAN_START_AT_TOP 0
-#define CAN_CLOCKWISE    0
+#define CAN_CLOCKWISE    1
 
 /* Size of a fluid cell, in LED spacings. The fluid's cost grows with the
- * cube of 1 / CAN_CELL_LEDS; 1.75 keeps a step well inside the 18 ms
- * frame on an ESP32. */
-#define CAN_CELL_LEDS 1.75f
+ * cube of 1 / CAN_CELL_LEDS; 1.4 gives the can about 60 cells a layer
+ * and a cell every 1.75 rows, at about the cube firmware's cost per step. */
+#define CAN_CELL_LEDS 1.4f
 
 /* Turns of the spiral: the LEDs per turn change evenly from one end to
  * the other, so the mean of the two ends sets how many turns the strip
@@ -42,9 +42,9 @@
 
 /* The grid round the can: at least 2 * CAN_RADIUS_MAX across and
  * CAN_HEIGHT high (test_fluid checks). */
-#define FLUID_NX 8
-#define FLUID_NY 8
-#define FLUID_NZ 10
+#define FLUID_NX 9
+#define FLUID_NY 9
+#define FLUID_NZ 8
 
 #define LED_COUNT CAN_LED_COUNT
 

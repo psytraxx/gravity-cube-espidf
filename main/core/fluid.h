@@ -2,7 +2,7 @@
  * can, which stands in a grid of FLUID_NX x FLUID_NY x FLUID_NZ cells.
  * The can is the cells whose centres lie within its radius at their
  * height (can_radius_at) and below CAN_HEIGHT; its walls are their outer
- * faces, so it is round, and narrows as it climbs, as far as a grid of
+ * faces, so it is round (and narrows, where the can does) as far as a grid of
  * cells allows.
  *
  * Particles carry the fluid's velocity. Each step they are accelerated by

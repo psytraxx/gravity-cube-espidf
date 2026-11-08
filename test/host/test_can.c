@@ -22,20 +22,24 @@ static void test_spiral_climbs_one_row_per_turn(void)
         TEST_ASSERT_FLOAT_WITHIN(0.02f, (0.5f + (float)t) * CAN_ROW_PITCH_CELLS,
                                  can_led_height(led));
     }
-    /* Counter-clockwise from above: a quarter turn on is on the +y side. */
+    /* A quarter turn on is on the +y side counter-clockwise from above,
+     * the -y side clockwise. */
     const vec3_t q = can_led_pos((int)lrintf(can_led_at_turns(0.25f)));
-    TEST_ASSERT_GREATER_THAN_FLOAT(FLUID_NY / 2.0f + 0.9f * can_radius_at(q.z), q.y);
+    const float side = CAN_CLOCKWISE ? -1.0f : 1.0f;
+    TEST_ASSERT_GREATER_THAN_FLOAT(0.9f * can_radius_at(q.z), side * (q.y - FLUID_NY / 2.0f));
 }
 
 /* The bottom turn holds CAN_LEDS_PER_TURN_BOTTOM LEDs, the top one
- * CAN_LEDS_PER_TURN_TOP, and the strip ends after CAN_TURNS turns. */
+ * CAN_LEDS_PER_TURN_TOP, the strip ends after CAN_TURNS turns, and the
+ * wider end has the more LEDs a turn. */
 static void test_turns_shorten_as_the_can_narrows(void)
 {
     TEST_ASSERT_FLOAT_WITHIN(0.5f, CAN_LEDS_PER_TURN_BOTTOM, can_led_at_turns(1.0f));
     TEST_ASSERT_FLOAT_WITHIN(0.5f, CAN_LEDS_PER_TURN_TOP,
                              can_led_at_turns(CAN_TURNS) - can_led_at_turns(CAN_TURNS - 1.0f));
     TEST_ASSERT_FLOAT_WITHIN(0.01f, (float)LED_COUNT, can_led_at_turns(CAN_TURNS));
-    TEST_ASSERT_GREATER_THAN_FLOAT(can_radius_at(CAN_HEIGHT), can_radius_at(0.0f));
+    TEST_ASSERT_TRUE((can_radius_at(0.0f) >= can_radius_at(CAN_HEIGHT)) ==
+                     (CAN_LEDS_PER_TURN_BOTTOM >= CAN_LEDS_PER_TURN_TOP));
 }
 
 /* Every LED sits on the can's wall at its height, inside the grid. */
@@ -162,8 +166,11 @@ static void test_calibration_lines(void)
     }
     TEST_ASSERT_EQUAL_INT(0, other);
     TEST_ASSERT_TRUE(is(&f, 0, 60, 0, 0));
-    TEST_ASSERT_TRUE(is(&f, (int)lrintf(can_led_at_turns(0.25f)), 0, 60, 0));
-    TEST_ASSERT_TRUE(is(&f, (int)lrintf(can_led_at_turns(3.5f)), 0, 0, 60));
+    /* A quarter turn on: green (+y) counter-clockwise, yellow (-y)
+     * clockwise. */
+    const int quarter = (int)floorf(can_led_at_turns(0.25f) + 0.5f);
+    TEST_ASSERT_TRUE(CAN_CLOCKWISE ? is(&f, quarter, 30, 30, 0) : is(&f, quarter, 0, 60, 0));
+    TEST_ASSERT_TRUE(is(&f, (int)floorf(can_led_at_turns(3.5f) + 0.5f), 0, 0, 60));
 }
 
 /* Tilted so the fluid falls towards +y: the white band lights LEDs on the

@@ -192,13 +192,13 @@ static void test_tint_varies_across_fluid_and_with_speed(void)
 {
     float west, east, still;
     fluid_sample(&f, (vec3_t){AXIS_X - 1.5f, AXIS_Y, 1.5f}, &west);
-    fluid_sample(&f, (vec3_t){AXIS_X + 1.5f, AXIS_Y, 5.5f}, &east);
+    fluid_sample(&f, (vec3_t){AXIS_X + 1.5f, AXIS_Y, 0.4f * CAN_HEIGHT}, &east);
     TEST_ASSERT_LESS_THAN_FLOAT(east - 20.0f, west);
     TEST_ASSERT_GREATER_OR_EQUAL_FLOAT(-FLUID_TINT_SPREAD, west);
     TEST_ASSERT_LESS_OR_EQUAL_FLOAT(FLUID_TINT_SPREAD, east);
 
     /* A push sideways: near the surface, where the fluid can move. */
-    const vec3_t near_top = {AXIS_X + 1.5f, AXIS_Y, 5.5f};
+    const vec3_t near_top = {AXIS_X + 1.5f, AXIS_Y, 0.4f * CAN_HEIGHT};
     fluid_sample(&f, near_top, &still);
     for (int i = 0; i < 3; i++) {
         fluid_step(&f, (vec3_t){3.0f, 0.0f, 0.0f});
