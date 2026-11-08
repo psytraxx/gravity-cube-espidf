@@ -112,7 +112,7 @@
   <text x="920" y="250" text-anchor="middle" font-weight="bold">WS2812B strip</text>
   <text x="920" y="268" text-anchor="middle">500 LEDs</text>
   <text x="920" y="300" text-anchor="middle" fill="#555555">spiral of 13 turns,</text>
-  <text x="920" y="318" text-anchor="middle" fill="#555555">39 to 37 LEDs a turn,</text>
+  <text x="920" y="318" text-anchor="middle" fill="#555555">39 to 36.8 LEDs a turn,</text>
   <text x="920" y="336" text-anchor="middle" fill="#555555">clockwise from the bottom</text>
   <text x="838" y="194">DIN</text>
   <text x="906" y="168">5V</text>
