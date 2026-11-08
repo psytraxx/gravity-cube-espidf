@@ -1,6 +1,6 @@
 /* Gravity can: a fluid in a can whose LED strip, wound round it in a
  * spiral, shows the liquid inside. Tilt it and the surface tilts; shake
- * it and the fluid sloshes.
+ * it and the fluid sloshes; its brightness pulses with the sound.
  *
  * Core 0 (this task) reads the IMU, runs the physics and builds frames;
  * core 1 sends them to the LEDs. The RMT send takes ~15 ms per changed
@@ -9,6 +9,7 @@
  * and firmware updates run on core 1 too (ota.c). */
 #include <math.h>
 
+#include "audio.h"
 #include "can.h"
 #include "esp_log.h"
 #include "esp_random.h"
@@ -17,6 +18,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
+#include "mic.h"
 #include "motion.h"
 #include "mpu6500.h"
 #include "ota.h"
@@ -154,6 +156,19 @@ void app_main(void)
     calibration(have_imu);
 #endif
 
+#if CONFIG_CAN_MIC
+    if (mic_start() != ESP_OK) {
+        ESP_LOGW(TAG, "No I2S microphone: full brightness");
+    }
+#endif
+    audio_t audio;
+#if CONFIG_CAN_MIC
+    audio_init(&audio, CONFIG_CAN_MIC_MIN_BRIGHTNESS / 100.0f);
+#else
+    audio_init(&audio, 1.0f);
+#endif
+    float sound_db = -100.0f;
+
     static fluid_t fluid;
     fluid_init(&fluid);
     fluid_populate(&fluid);
@@ -206,16 +221,32 @@ void app_main(void)
         fluid_step(&fluid, motion_filter_apply(&motion, accel, rotation));
         const int64_t physics_us = esp_timer_get_time() - start;
 
-        can_view_frame(&view, &fluid, hue, &frame);
+        /* The latest 20 ms of sound sets the brightness; without a
+         * microphone sending, it stays full. */
+        float rms = 0.0f;
+        bool have_sound = false;
+#if CONFIG_CAN_MIC
+        have_sound = mic_level(&rms);
+#endif
+        float brightness = 1.0f;
+        if (have_sound) {
+            sound_db = audio_db(rms);
+            audio_feed(&audio, sound_db, CONFIG_CAN_FRAME_MS / 1000.0f);
+            brightness = audio_brightness(&audio);
+        }
+
+        can_view_frame(&view, &fluid, hue, brightness, &frame);
         xQueueSend(s_frames, &frame, portMAX_DELAY);
         const int64_t frame_us = esp_timer_get_time() - start;
 
         if (++loops % LOG_EVERY == 0) {
             ESP_LOGI(TAG,
                      "Loop %lu: accel (%.2f, %.2f, %.2f) |%.2f| g, gyro (%.2f, %.2f, %.2f) rad/s, "
-                     "physics %lld us, frame %lld us, LED send %lld us",
+                     "sound %.0f dB%s, brightness %.0f %%, physics %lld us, frame %lld us, "
+                     "LED send %lld us",
                      (unsigned long)loops, accel.x, accel.y, accel.z, v3_len(accel), gyro_rate.x,
-                     gyro_rate.y, gyro_rate.z, physics_us, frame_us, s_led_send_us);
+                     gyro_rate.y, gyro_rate.z, sound_db, have_sound ? "" : " (no microphone)",
+                     100.0f * brightness, physics_us, frame_us, s_led_send_us);
         }
         if (loops == LOG_EVERY) {
             ota_app_ok();

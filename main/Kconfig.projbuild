@@ -79,6 +79,45 @@ config CAN_IMU_I2C_SCAN
         until it is power cycled, so the scan only finds it after a power
         on, not after a reset.
 
+menu "Microphone"
+
+config CAN_MIC
+    bool "Pulse the brightness with the sound"
+    default y
+    help
+        Read an I2S microphone (INMP441 or alike) and pulse the fluid's
+        brightness with the sound: dim in the quiet, full on a loud
+        sound, fading after it. The firmware follows both the quiet and
+        the loud parts, so beats pulse in a quiet room and over loud
+        music alike. Without a microphone sending, the fluid stays at
+        full brightness.
+
+config CAN_MIC_SD
+    int "Microphone SD (data) GPIO"
+    depends on CAN_MIC
+    default 32
+
+config CAN_MIC_SCK
+    int "Microphone SCK (bit clock) GPIO"
+    depends on CAN_MIC
+    default 33
+
+config CAN_MIC_WS
+    int "Microphone WS (word select) GPIO"
+    depends on CAN_MIC
+    default 25
+
+config CAN_MIC_MIN_BRIGHTNESS
+    int "Brightness in the quiet (%)"
+    depends on CAN_MIC
+    default 25
+    range 0 100
+    help
+        The fluid's brightness while it is quiet, as a share of full.
+        Loud sounds pulse it up to full.
+
+endmenu
+
 menu "Wi-Fi and firmware updates"
 
 config CAN_WIFI_SSID

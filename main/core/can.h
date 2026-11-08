@@ -48,8 +48,9 @@ typedef struct {
 void can_view_init(can_view_t *v);
 
 /* Light every LED with fluid behind it in `hue` plus the fluid's tint
- * there; the rest stay dark. */
-void can_view_frame(can_view_t *v, const fluid_t *f, uint32_t hue, frame_t *frame);
+ * there, at `brightness` (0 to 1); the rest stay dark. */
+void can_view_frame(can_view_t *v, const fluid_t *f, uint32_t hue, float brightness,
+                    frame_t *frame);
 
 /* Calibration picture. Four coloured lines run up the can, the LED
  * nearest each angle on every turn: red at LED 0's angle (+x), then green

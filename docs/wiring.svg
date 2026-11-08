@@ -104,7 +104,7 @@
   <text x="608" y="474">WS</text>
   <text x="608" y="499">SD</text>
   <text x="680" y="530" text-anchor="middle" font-weight="bold">I2S microphone</text>
-  <text x="680" y="546" text-anchor="middle" fill="#555555">not read by the firmware</text>
+  <text x="680" y="546" text-anchor="middle" fill="#555555">pulses the brightness</text>
   <text x="628" y="424">VDD</text>
   <text x="752" y="499" text-anchor="end">GND, L/R</text>
 
@@ -125,6 +125,6 @@
     <path d="M170 0 H194" stroke="#222222" stroke-width="2.5"/><text x="200" y="4">GND</text>
     <path d="M260 0 H284" stroke="#1565c0" stroke-width="2.5"/><text x="290" y="4">LED data</text>
     <path d="M370 0 H394" stroke="#6a1b9a" stroke-width="2.5"/><text x="400" y="4">IMU SPI</text>
-    <path d="M470 0 H494" stroke="#2e7d32" stroke-width="2.5"/><text x="500" y="4">Microphone (not read by the firmware)</text>
+    <path d="M470 0 H494" stroke="#2e7d32" stroke-width="2.5"/><text x="500" y="4">Microphone I2S</text>
   </g>
 </svg>

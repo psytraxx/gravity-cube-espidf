@@ -3,9 +3,11 @@
 Firmware for a can of light: a WS2812B strip wound in a spiral round a
 slightly conical cylinder shows the liquid inside it. Tilt the can and the surface tilts;
 shake it and the fluid sloshes; lay it on its side and the fluid runs
-along the low side. A double tap gives the fluid a new, random colour.
+along the low side. Its brightness pulses with the sound around it, and
+a double tap gives the fluid a new, random colour.
 
-It runs on an ESP32-WROOM-32 with an MPU-6500 IMU, and is written in C
+It runs on an ESP32-WROOM-32 with an MPU-6500 IMU and an I2S
+microphone, and is written in C
 for ESP-IDF 6.1. The physics is a port of the fluid solver in
 [gravity-cube-rs](https://github.com/psytraxx/gravity-cube-rs).
 
@@ -16,7 +18,7 @@ for ESP-IDF 6.1. The physics is a port of the fluid solver in
 | ESP32-WROOM-32 board | 4 MB flash |
 | MPU-92/65 board | MPU-6500 (chip marked MP65), 3–5 V supply (on-board regulator), wired for SPI |
 | WS2812B strip, 500 LEDs | 100 per metre, wound in a spiral of about 12.7 turns (13 rows) round the can, each turn the same way round: about 40.5 LEDs a turn at the bottom, 38 at the top |
-| I2S microphone (e.g. INMP441) | On GPIO 32, 33 and 25; wired, but the firmware does not read it |
+| I2S microphone (e.g. INMP441) | On GPIO 32, 33 and 25; its sound pulses the brightness |
 | 330 Ω resistor | In series with the data line, at the strip's input |
 | 1000 µF capacitor or more | Across 5 V and GND at the strip's input (10 V or more) |
 | 1N5819 Schottky diode | From the 5 V supply to the board's 5V pin, so USB cannot feed the strip or the supply |
@@ -88,8 +90,10 @@ idles high, so it is.
 | WS | GPIO 25 (I2S word select) |
 | L/R | GND (left channel) |
 
-The firmware does not read the microphone. The three pins sit next to
-each other on the header, and none has a role at boot. In WLED's
+The three pins sit next to each other on the header, and none has a
+role at boot; they are settable in menuconfig. The data line has the
+ESP32's pull-down on, so with no microphone it reads silence and the
+firmware keeps the fluid at full brightness. In WLED's
 sound-reactive build the same wiring is `"digitalmic": {"type": 1,
 "pin": [32, 25, 33, -1]}` (SD, WS, SCK, no MCLK), with the LEDs on
 GPIO 13.
@@ -235,6 +239,9 @@ Without a token, anyone on the network can reflash the can.
 | Tap threshold | 1000 mg | Raise it if sloshing changes the colour, lower it if taps are missed |
 | IMU SPI pins | 23, 19, 18, 5 | MOSI, MISO, SCLK, CS |
 | I2C scan at startup | off | Wiring check: probes the IMU pins as I2C; finds the MPU-6500 at 0x68/0x69 after a power on |
+| Pulse the brightness with the sound | on | Reads the I2S microphone |
+| Microphone pins | 32, 33, 25 | SD, SCK, WS |
+| Brightness in the quiet | 25 % | Loud sounds pulse it up to full |
 | Wi-Fi SSID, password | empty | Network for updates over Wi-Fi; an empty SSID turns Wi-Fi off |
 | Hostname | can | Answers at `http://can.local/` |
 | Update token | empty | Updates need `Authorization: Bearer <token>`; empty lets anyone on the network update |
@@ -249,6 +256,8 @@ flowchart LR
     IMU[MPU-6500 FIFO<br/>250 Hz] --> TAP[tap detector]
     IMU --> MF[motion filter]
     TAP -->|double tap: random hue| FB
+    MIC[I2S microphone<br/>core 1, 16 kHz] -->|loudness| PULSE[pulse tracker]
+    PULSE -->|brightness| FB
     MF -->|gravity + amplified motion| FX[fluid step]
     IMU -->|gyro, integrated| FX
     FX --> FB[frame builder:<br/>density behind each LED]
@@ -279,6 +288,20 @@ as a tap; a second tap within 375 ms picks a random hue at least 60°
 from the current one. Shaking never has the stillness, so it does not
 change the colour. Every hue's channels add up to 60/255, so the strip
 draws the same current in any colour.
+
+**Sound.** A task on core 1 reads the microphone at 16 kHz (24-bit
+samples in 32-bit slots, both slots, so the L/R pin may go either way)
+and keeps the RMS of the latest 20 ms, its DC removed. Each frame turns
+that into a level in dB and places it between two followers: the floor,
+the quiet between sounds (it drops at once to a quieter level and creeps
+up 3 dB a second through louder ones), and the peak, the loud parts (it
+jumps at once and sinks 6 dB a second, staying at least 12 dB above the
+floor). A level 3 dB over the floor starts to count; at the peak it
+counts in full. The pulse jumps to that share at once and fades with a
+150 ms time constant, and the brightness runs from the quiet setting
+(25 %) at no pulse to full at a full one. So a clap in a quiet room
+flashes the fluid, steady noise settles back to dim within seconds, and
+beats over loud music still pulse.
 
 **Fluid.** An incompressible FLIP fluid: inviscid Navier-Stokes on a
 staggered grid of 8 × 8 × 10 cells, each 1.75 LED spacings across
@@ -318,8 +341,9 @@ than steps.
 | `main/main.c` | Main loop on core 0, LED task on core 1, LED test, calibration picture |
 | `main/ota.c` | Wi-Fi, mDNS and the update server on core 1; keeps or rolls back a new image |
 | `main/mpu6500.c` | MPU-6500 over SPI: setup, gyro calibration, FIFO reads |
+| `main/mic.c` | I2S microphone on core 1: the loudness of the latest 20 ms |
 | `main/ws2812.c` | The strip through the `espressif/led_strip` component (RMT) |
-| `main/core/` | Everything that needs no hardware: fluid, LED spiral and calibration picture, colours, motion filter, tap detector, IMU sample decoding |
+| `main/core/` | Everything that needs no hardware: fluid, LED spiral and calibration picture, colours, motion filter, tap detector, sound pulse, IMU sample decoding |
 | `test/host/` | Unity tests for `main/core`, run on the host |
 
 ## Tests

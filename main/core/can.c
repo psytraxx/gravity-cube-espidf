@@ -78,7 +78,7 @@ void can_view_init(can_view_t *v)
     memset(v, 0, sizeof *v);
 }
 
-void can_view_frame(can_view_t *v, const fluid_t *f, uint32_t hue, frame_t *frame)
+void can_view_frame(can_view_t *v, const fluid_t *f, uint32_t hue, float brightness, frame_t *frame)
 {
     frame_clear(frame);
     for (int i = 0; i < LED_COUNT; i++) {
@@ -91,7 +91,7 @@ void can_view_frame(can_view_t *v, const fluid_t *f, uint32_t hue, frame_t *fram
         v->lit[i] = density >= (v->lit[i] ? LIGHT_OFF : LIGHT_ON);
         if (v->lit[i]) {
             const int h = (int)hue + 360 + (int)lrintf(tint);
-            frame_set_led(frame, i, color_from_hue((uint32_t)h));
+            frame_set_led(frame, i, color_scale(color_from_hue((uint32_t)h), brightness));
         }
     }
 }

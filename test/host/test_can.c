@@ -75,7 +75,7 @@ static void test_half_full_can_lights_bottom_half(void)
     can_view_t v;
     can_view_init(&v);
     frame_t frame;
-    can_view_frame(&v, &f, FLUID_HUE, &frame);
+    can_view_frame(&v, &f, FLUID_HUE, 1.0f, &frame);
     const int lit = lit_count(&v);
     TEST_ASSERT_INT_WITHIN(LED_COUNT / 8, LED_COUNT / 2, lit);
     TEST_ASSERT_TRUE(v.lit[0]);
@@ -92,7 +92,7 @@ static void test_half_full_can_lights_bottom_half(void)
             before[i] = v.lit[i];
         }
         fluid_step(&f, down);
-        can_view_frame(&v, &f, FLUID_HUE, &frame);
+        can_view_frame(&v, &f, FLUID_HUE, 1.0f, &frame);
         for (int i = 0; i < LED_COUNT; i++) {
             changes += v.lit[i] != before[i];
         }
@@ -115,7 +115,7 @@ static void test_tilt_lights_the_low_side(void)
     can_view_t v;
     can_view_init(&v);
     frame_t frame;
-    can_view_frame(&v, &f, FLUID_HUE, &frame);
+    can_view_frame(&v, &f, FLUID_HUE, 1.0f, &frame);
     float east = 0.0f, west = 0.0f;
     for (int i = 0; i < LED_COUNT; i++) {
         if (!v.lit[i]) {

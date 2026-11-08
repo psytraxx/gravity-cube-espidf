@@ -6,14 +6,15 @@ Project guidance for Claude Code working in this repository.
 
 ESP-IDF 6.1 firmware in C for a "gravity can": a 500-LED WS2812B strip
 wound in a spiral round a slightly conical cylinder, on an
-ESP32-WROOM-32 with an MPU-6500 IMU. README.md describes the hardware, wiring and design.
+ESP32-WROOM-32 with an MPU-6500 IMU and an I2S microphone. README.md
+describes the hardware, wiring and design.
 
 ## Layout
 
 - `main/core/` holds everything that needs no hardware (fluid, LED
-  spiral, colours, motion filter, tap detector, IMU decoding). It must not include
+  spiral, colours, motion filter, tap detector, sound pulse, IMU decoding). It must not include
   ESP-IDF or `sdkconfig.h` headers, so it builds on the host.
-- `main/*.c` are the ESP-IDF parts: main loop, MPU-6500 driver, WS2812
+- `main/*.c` are the ESP-IDF parts: main loop, MPU-6500 and microphone drivers, WS2812
   driver. Pins and options come from `main/Kconfig.projbuild`.
 - `test/host/` has Unity tests for `main/core`; every `test_*.c` there is
   one test binary.
