@@ -150,27 +150,22 @@ LED send times.
 The firmware has to know where every LED sits and how the IMU lies. For
 a new hat, or after rewinding the strip:
 
-1. **Calibration picture on.** In `idf.py menuconfig` → *Gravity hat*,
-   turn on *Calibration picture instead of the fluid*, then build and
-   flash. The hat shows four coloured lines; a double tap switches to a
-   ruler and back. Updates over Wi-Fi keep working, so
-   the steps below can be flashed over the network.
-2. **Read the strip off the ruler.** It lights LED 0 red, every 100th
-   LED green, every 50th blue and every 10th white. Note:
-   - the turn LED 0 is in, bottom or top: `HAT_START_AT_TOP`;
-   - which way the marks run from LED 0, seen from above:
+1. **Count the strip.** Note:
+   - the turn the data enters, bottom or top: `HAT_START_AT_TOP`;
+   - which way the strip winds from there, seen from above:
      `HAT_CLOCKWISE`;
-   - the LED straight above (or below) LED 0, one row on, counted from
-     the white mark before it (two past the 30 mark is 32): the LEDs in
-     the first turn;
-   - the LED straight beside the strip's last LED, one row back,
-     subtracted from the last LED's number: the LEDs in the last turn;
+   - the LEDs in the bottom turn and in the top turn, counted round the
+     hat: `HAT_LEDS_PER_TURN_BOTTOM`, `HAT_LEDS_PER_TURN_TOP`;
    - the distance between two rows over the distance between two LEDs
      along the strip: `HAT_ROW_PITCH`;
    - 1000 over the strip's LEDs per metre: `HAT_LED_SPACING_MM`.
 
-   Set them in [`main/core/config.h`](main/core/config.h), run the host
-   tests (they fail if the grid needs to grow), build and flash.
+   Set them in [`main/core/config.h`](main/core/config.h) and run the
+   host tests (they fail if the grid needs to grow).
+2. **Calibration picture on.** In `idf.py menuconfig` → *Gravity hat*,
+   turn on *Calibration picture instead of the fluid*, then build and
+   flash. Updates over Wi-Fi keep working, so the steps below can be
+   flashed over the network.
 3. **Straighten the lines.** Four lines run up the hat, one LED per
    turn: red at LED 0's angle, then green, blue and yellow a quarter turn
    apart, counter-clockwise seen from above. Where the LEDs per turn are
@@ -263,7 +258,7 @@ Without a token, anyone on the network hat reflash the hat.
 |---|---|---|
 | LED data GPIO | 13 | |
 | Physics step period | 18 ms | The physics constants are per step |
-| Calibration picture | off | Instead of the fluid: lines for the geometry, a band for the IMU, a ruler on a double tap; see [Setting up a hat](#setting-up-a-hat) |
+| Calibration picture | off | Instead of the fluid: lines for the geometry, a band for the IMU; see [Setting up a hat](#setting-up-a-hat) |
 | Tap threshold | 1000 mg | Raise it if sloshing changes the colour, lower it if taps are missed |
 | IMU SPI pins | 23, 19, 18, 5 | MOSI, MISO, SCLK, CS |
 | IMU rotation | 0° | Where LED 0's side lies seen from the IMU board's X arrow, counter-clockwise; see [Setting up a hat](#setting-up-a-hat) |

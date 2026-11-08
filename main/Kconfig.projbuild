@@ -23,16 +23,14 @@ config HAT_CALIBRATION
     default n
     help
         For setting up the strip's geometry and the IMU: show a
-        calibration picture instead of the fluid. Four
-        coloured lines run up the hat, one LED per turn each: red at LED
-        0's angle, then green, blue and yellow a quarter turn apart. They
+        calibration picture instead of the fluid. Four coloured lines
+        run up the hat, one LED per turn each: red at LED 0's angle,
+        then green, blue and yellow a quarter turn apart. They
         stand straight if the LEDs per turn in main/core/config.h are
         right, and run red, green, blue, yellow counter-clockwise seen
         from above if the winding direction is. Tilt the hat and a white
         band lights the low side, where the fluid would run: if it lights
         the wrong side, set the IMU rotation (below).
-        A double tap switches to a ruler for counting LEDs (LED 0 red,
-        every 100th green, every 50th blue, every 10th white) and back.
 
 config HAT_TAP_THRESHOLD_MG
     int "Tap threshold (mg)"

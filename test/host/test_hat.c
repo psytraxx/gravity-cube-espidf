@@ -192,24 +192,6 @@ static void test_calibration_band_follows_tilt(void)
     TEST_ASSERT_EQUAL_INT(0, minus_y);
 }
 
-/* The ruler marks every 10th LED: 0 red, 100s green, 50s blue, the rest
- * white; nothing between. */
-static void test_ruler(void)
-{
-    static frame_t f;
-    hat_ruler_frame(&f);
-    TEST_ASSERT_TRUE(is(&f, 0, 60, 0, 0));
-    TEST_ASSERT_TRUE(is(&f, 10, 20, 20, 20));
-    TEST_ASSERT_TRUE(is(&f, 50, 0, 0, 60));
-    TEST_ASSERT_TRUE(is(&f, 100, 0, 60, 0));
-    TEST_ASSERT_TRUE(is(&f, 490, 20, 20, 20));
-    int lit = 0;
-    for (int i = 0; i < LED_COUNT; i++) {
-        lit += !is(&f, i, 0, 0, 0);
-    }
-    TEST_ASSERT_EQUAL_INT(LED_COUNT / 10, lit);
-}
-
 /* At rest, board flat with Z up: +1 g on sensor Z pulls towards the floor,
  * +1 g on sensor X (X pointing up) towards -x, and the gyro keeps its
  * axes. */
@@ -235,7 +217,6 @@ int main(void)
     RUN_TEST(test_tilt_lights_the_low_side);
     RUN_TEST(test_calibration_lines);
     RUN_TEST(test_calibration_band_follows_tilt);
-    RUN_TEST(test_ruler);
     RUN_TEST(test_decode_rest_and_spin);
     return UNITY_END();
 }
