@@ -120,9 +120,10 @@ there. The grid round the can (`FLUID_NX`, `FLUID_NY`, `FLUID_NZ`) has
 to hold it: the host tests check, and fail if a new geometry needs a
 bigger grid.
 
-The IMU board lies flat on the can's lid or floor, chip side up, with
-its X axis pointing at LED 0. Mounted any other way, edit
-`MPU6500_AXIS_MAP` in
+The IMU board lies flat on the can's lid or floor, chip side up, its X
+arrow pointing any way round: *IMU rotation* in menuconfig says which,
+and the firmware turns its readings into the can's axes. Mounted on its
+side or upside down, edit `MPU6500_AXIS_MAP` in
 [`main/core/mpu6500_decode.h`](main/core/mpu6500_decode.h).
 
 ## Build and flash
@@ -189,12 +190,19 @@ a new can, or after rewinding the strip:
    more a turn at one end moves the far end of the line about 0.65 LEDs,
    at both ends about 1.3. Counting by hand is seldom exact; a few rounds
    of looking at the lines settle it.
-4. **Mount and check the IMU.** Lay the board flat on the can's lid or
-   floor, chip side up, its X arrow pointing at LED 0 (the bottom of the
-   red line on this hat). Tilt the can: a white band lights its low
-   side, where the fluid would run. If it lights the opposite side for
-   one tilt direction, flip that axis' sign in `MPU6500_AXIS_MAP` in
-   [`main/core/mpu6500_decode.h`](main/core/mpu6500_decode.h).
+4. **Mount the IMU and set its rotation.** Lay the board flat on the
+   can's lid or floor, chip side up, its X arrow pointing any way round.
+   Tilt the can and a white band lights the side the firmware takes for
+   low. With *IMU rotation* at 0, tip the can so that LED 0's side (the
+   red line) is lowest: the band lights the side the setting points at,
+   a quarter turn per line, counter-clockwise seen from above: on the
+   green line 90, on the blue 180, on the yellow 270, in between in
+   between. The monitor logs it exactly as `low side at N deg` (add 360
+   if N is negative). Set *IMU rotation* to it, flash, and the band
+   follows every tilt: red side down lights the red line, green side
+   down the green. If the band moves the right way for one tilt but the
+   wrong way for the other, the board is mirrored, which a right-way-up
+   board cannot be: check it lies chip side up.
 5. **Calibration picture off.** Build and flash: the fluid.
 
 This hat came out at LED 0 on the brim, winding clockwise, 39 LEDs a
@@ -266,6 +274,7 @@ Without a token, anyone on the network can reflash the can.
 | Calibration picture | off | Instead of the fluid: lines for the geometry, a band for the IMU, a ruler on a double tap; see [Setting up a can](#setting-up-a-can) |
 | Tap threshold | 1000 mg | Raise it if sloshing changes the colour, lower it if taps are missed |
 | IMU SPI pins | 23, 19, 18, 5 | MOSI, MISO, SCLK, CS |
+| IMU rotation | 0° | Where LED 0's side lies seen from the IMU board's X arrow, counter-clockwise; see [Setting up a can](#setting-up-a-can) |
 | I2C scan at startup | off | Wiring check: probes the IMU pins as I2C; finds the MPU-6500 at 0x68/0x69 after a power on |
 | Pulse the brightness with the sound | on | Reads the I2S microphone |
 | Microphone pins | 32, 33, 25 | SD, SCK, WS |

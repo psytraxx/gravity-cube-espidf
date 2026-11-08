@@ -70,6 +70,20 @@ config CAN_IMU_SPI_CS
     int "SPI CS GPIO (board NCS)"
     default 5
 
+config CAN_IMU_YAW_DEG
+    int "IMU rotation (degrees)"
+    default 0
+    range 0 359
+    help
+        Where LED 0's side of the can lies as the IMU board sees it: in
+        degrees counter-clockwise (seen from above) from the board's X
+        arrow. The firmware turns every reading back by as much. To find
+        it, turn on the calibration picture with this at 0 and tip the
+        can so that LED 0's side (the red line) is lowest. The white band
+        then lights the side the setting points at: on the green line it
+        is 90, on the blue 180, on the yellow 270. The monitor logs it
+        exactly as "low side at N deg" (add 360 if N is negative).
+
 config CAN_IMU_I2C_SCAN
     bool "Scan for I2C devices on the IMU pins at startup"
     default n

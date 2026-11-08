@@ -57,6 +57,11 @@ static const char *TAG = "mpu6500";
 
 static vec3_t s_gyro_bias;
 
+/* The board's turn about the can's axis, undone on every sample: LED 0's
+ * side lies CONFIG_CAN_IMU_YAW_DEG counter-clockwise (seen from above)
+ * of the board's X arrow, and every reading turns back by as much. */
+#define YAW_RAD ((float)CONFIG_CAN_IMU_YAW_DEG * 3.14159265f / 180.0f)
+
 /* All registers are good for 1 MHz; only the sensor registers take 20. */
 #define SPI_HZ 1000000
 
@@ -231,8 +236,10 @@ int mpu6500_read(imu_sample_t *out, int max)
         return -1;
     }
     for (int i = 0; i < n; i++) {
-        out[i] = mpu6500_decode(&buf[i * MPU6500_SAMPLE_BYTES]);
-        out[i].gyro = v3_sub(out[i].gyro, s_gyro_bias);
+        const imu_sample_t s = mpu6500_decode(&buf[i * MPU6500_SAMPLE_BYTES]);
+        const vec3_t undo_yaw = v3(0.0f, 0.0f, -YAW_RAD);
+        out[i].accel = v3_rotate(s.accel, undo_yaw);
+        out[i].gyro = v3_rotate(v3_sub(s.gyro, s_gyro_bias), undo_yaw);
     }
     return n;
 }

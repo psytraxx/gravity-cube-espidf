@@ -16,7 +16,8 @@
  * should be still while this runs (about half a second). */
 esp_err_t mpu6500_init(void);
 
-/* Read up to `max` samples from the FIFO, oldest first, gyro bias removed.
+/* Read up to `max` samples from the FIFO, oldest first, gyro bias removed,
+ * turned by the IMU rotation in menuconfig into the can's axes.
  * Returns the number read, 0 if none are waiting or the FIFO overflowed
  * (it is then reset), or -1 on a bus error. */
 int mpu6500_read(imu_sample_t *out, int max);
