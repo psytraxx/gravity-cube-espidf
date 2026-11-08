@@ -9,10 +9,6 @@
 /* Six 8x8 panels, one per face, chained in one WS2812 string. */
 #define LED_COUNT (6 * CUBE_SIZE * CUBE_SIZE)
 
-typedef struct {
-    uint8_t r, g, b;
-} color_t;
-
 /* Fluid: half the cube full at two particles per voxel, starting green. A
  * double tap picks a random hue; its channels always add up to
  * FLUID_LEVEL, so every colour draws the current of one channel at

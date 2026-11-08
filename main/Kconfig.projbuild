@@ -85,17 +85,6 @@ config CUBE_IMU_INT1
         until the firmware has read it. GPIO 9 is on the SuperMini's
         header and is not a strapping pin.
 
-config CUBE_IMU_I2C_SCAN
-    bool "Scan for I2C devices on the IMU pins at startup"
-    default n
-    help
-        Wiring check: before setting up SPI, hold CS high (which keeps the
-        BMI160 on I2C) and probe every address with SCL on the SCLK pin
-        and SDA on the MOSI pin. A BMI160 answers at 0x68 (SA0 low) or
-        0x69 (SA0 high). The SPI setup switches the chip to SPI until it
-        is power cycled, so the scan only finds it after a power on, not
-        after a reset.
-
 menu "Wi-Fi and firmware updates"
 
 config CUBE_WIFI_SSID

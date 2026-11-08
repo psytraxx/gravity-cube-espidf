@@ -1,7 +1,6 @@
 #include "panel.h"
 
 #include <stdbool.h>
-#include <string.h>
 
 #define N    CUBE_SIZE
 #define LAST (CUBE_SIZE - 1)
@@ -118,20 +117,12 @@ int panel_leds(cell_t c, uint16_t leds[3])
     return n;
 }
 
-void frame_clear(frame_t *f)
-{
-    memset(f->rgb, 0, sizeof f->rgb);
-}
-
 void frame_set(frame_t *f, cell_t cell, color_t color)
 {
     uint16_t leds[3];
     const int n = panel_leds(cell, leds);
     for (int i = 0; i < n; i++) {
-        uint8_t *px = &f->rgb[leds[i] * 3];
-        px[0] = color.r;
-        px[1] = color.g;
-        px[2] = color.b;
+        frame_set_led(f, leds[i], color);
     }
 }
 
@@ -158,11 +149,7 @@ void frame_set_panel_led(frame_t *f, int panel, uint8_t col, uint8_t row, color_
     /* Panels in chain order, faces in enum order. */
     static const face_t faces[PANEL_COUNT] = {FACE_EAST,  FACE_SOUTH, FACE_WEST,
                                               FACE_NORTH, FACE_DOWN,  FACE_UP};
-    const uint16_t led = face_led(faces[panel], panel_cell(panel, col, row));
-    uint8_t *px = &f->rgb[led * 3];
-    px[0] = color.r;
-    px[1] = color.g;
-    px[2] = color.b;
+    frame_set_led(f, face_led(faces[panel], panel_cell(panel, col, row)), color);
 }
 
 const char *panel_name(int panel)

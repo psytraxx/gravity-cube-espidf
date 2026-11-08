@@ -6,14 +6,12 @@
  * frame, so the two overlap: core 0 computes the next frame while core 1
  * sends the current one, and only waits if core 1 is still busy. Wi-Fi
  * and firmware updates run on core 1 too (ota.c). */
-#include <math.h>
-
 #include "assembly.h"
-#include "color.h"
 #include "esp_log.h"
 #include "esp_random.h"
 #include "esp_timer.h"
 #include "fluid.h"
+#include "imu.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
@@ -22,6 +20,7 @@
 #include "ota.h"
 #include "panel.h"
 #include "sdkconfig.h"
+#include "view.h"
 #include "ws2812.h"
 
 static const char *TAG = "cube";
@@ -117,8 +116,8 @@ void app_main(void)
     static imu_sample_t samples[MAX_SAMPLES];
     static frame_t frame;
     /* No IMU (or no new sample): gravity towards z == 0. */
-    vec3_t accel = v3(0.0f, 0.0f, -1.0f);
-    vec3_t gyro_rate = v3(0.0f, 0.0f, 0.0f);
+    imu_batch_t imu;
+    imu_batch_init(&imu);
     uint32_t loops = 0;
     TickType_t wake = xTaskGetTickCount();
 
@@ -131,38 +130,18 @@ void app_main(void)
 
         /* Every sample since the last frame: the gyro is integrated over
          * all of them, and their mean is this frame's acceleration. */
-        vec3_t rotation = v3(0.0f, 0.0f, 0.0f);
         const int n = have_imu ? bmi160_read(samples, MAX_SAMPLES) : 0;
         if (n < 0) {
             ESP_LOGW(TAG, "IMU read failed");
         }
-        if (n > 0) {
-            vec3_t sum = v3(0.0f, 0.0f, 0.0f);
-            for (int i = 0; i < n; i++) {
-                sum = v3_add(sum, samples[i].accel);
-                rotation = v3_add(rotation, v3_scale(samples[i].gyro, BMI160_SAMPLE_MS / 1000.0f));
-            }
-            accel = v3_scale(sum, 1.0f / (float)n);
-            gyro_rate = samples[n - 1].gyro;
-        }
+        imu_batch(&imu, samples, n, BMI160_SAMPLE_MS / 1000.0f);
 
         const int64_t start = esp_timer_get_time();
-        fluid_set_rotation(&fluid, rotation);
-        fluid_step(&fluid, motion_filter_apply(&motion, accel, rotation));
+        fluid_set_rotation(&fluid, imu.rotation);
+        fluid_step(&fluid, motion_filter_apply(&motion, imu.accel, imu.rotation));
         const int64_t physics_us = esp_timer_get_time() - start;
 
-        frame_clear(&frame);
-        for (uint8_t z = 0; z < CUBE_SIZE; z++) {
-            for (uint8_t y = 0; y < CUBE_SIZE; y++) {
-                for (uint8_t x = 0; x < CUBE_SIZE; x++) {
-                    const cell_t c = {x, y, z};
-                    if (fluid_lit(&fluid, c)) {
-                        const int tint = (int)lrintf(fluid_tint(&fluid, c));
-                        frame_set(&frame, c, color_from_hue((uint32_t)((int)hue + 360 + tint)));
-                    }
-                }
-            }
-        }
+        view_frame(&fluid, hue, &frame);
         xQueueSend(s_frames, &frame, portMAX_DELAY);
         const int64_t frame_us = esp_timer_get_time() - start;
 
@@ -170,8 +149,8 @@ void app_main(void)
             ESP_LOGI(TAG,
                      "Loop %lu: accel (%.2f, %.2f, %.2f) |%.2f| g, gyro (%.2f, %.2f, %.2f) rad/s, "
                      "physics %lld us, frame %lld us, LED send %lld us",
-                     (unsigned long)loops, accel.x, accel.y, accel.z, v3_len(accel), gyro_rate.x,
-                     gyro_rate.y, gyro_rate.z, physics_us, frame_us, s_led_send_us);
+                     (unsigned long)loops, imu.accel.x, imu.accel.y, imu.accel.z, v3_len(imu.accel),
+                     imu.rate.x, imu.rate.y, imu.rate.z, physics_us, frame_us, s_led_send_us);
         }
         if (loops == LOG_EVERY) {
             ota_app_ok();
