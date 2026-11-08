@@ -73,19 +73,19 @@ esp_err_t mic_start(void)
         .gpio_cfg =
             {
                 .mclk = I2S_GPIO_UNUSED,
-                .bclk = CONFIG_CAN_MIC_SCK,
-                .ws = CONFIG_CAN_MIC_WS,
+                .bclk = CONFIG_HAT_MIC_SCK,
+                .ws = CONFIG_HAT_MIC_WS,
                 .dout = I2S_GPIO_UNUSED,
-                .din = CONFIG_CAN_MIC_SD,
+                .din = CONFIG_HAT_MIC_SD,
             },
     };
     ESP_RETURN_ON_ERROR(i2s_channel_init_std_mode(s_rx, &std), TAG, "std mode");
     /* Without a microphone the data line reads zeros, not noise. */
-    gpio_pulldown_en(CONFIG_CAN_MIC_SD);
+    gpio_pulldown_en(CONFIG_HAT_MIC_SD);
     ESP_RETURN_ON_ERROR(i2s_channel_enable(s_rx), TAG, "enable");
     xTaskCreatePinnedToCore(mic_task, "mic", 3072, NULL, 3, NULL, 1);
-    ESP_LOGI(TAG, "I2S microphone: SD %d, SCK %d, WS %d, %d Hz", CONFIG_CAN_MIC_SD,
-             CONFIG_CAN_MIC_SCK, CONFIG_CAN_MIC_WS, SAMPLE_RATE_HZ);
+    ESP_LOGI(TAG, "I2S microphone: SD %d, SCK %d, WS %d, %d Hz", CONFIG_HAT_MIC_SD,
+             CONFIG_HAT_MIC_SCK, CONFIG_HAT_MIC_WS, SAMPLE_RATE_HZ);
     return ESP_OK;
 }
 

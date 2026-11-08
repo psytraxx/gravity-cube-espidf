@@ -1,12 +1,12 @@
 /* Fluid: an incompressible FLIP fluid (inviscid Navier-Stokes) in the
- * can, which stands in a grid of FLUID_NX x FLUID_NY x FLUID_NZ cells.
- * The can is the cells whose centres lie within its radius at their
- * height (can_radius_at) and below CAN_HEIGHT; its walls are their outer
- * faces, so it is round (and narrows, where the can does) as far as a grid of
+ * hat, which stands in a grid of FLUID_NX x FLUID_NY x FLUID_NZ cells.
+ * The hat is the cells whose centres lie within its radius at their
+ * height (hat_radius_at) and below HAT_HEIGHT; its walls are their outer
+ * faces, so it is round (and narrows, where the hat does) as far as a grid of
  * cells allows.
  *
  * Particles carry the fluid's velocity. Each step they are accelerated by
- * gravity and by the can's rotation, move, and are pushed apart so they
+ * gravity and by the hat's rotation, move, and are pushed apart so they
  * stay evenly spread. Their velocity is then spread onto a staggered (MAC)
  * grid with one cell per voxel, where a Gauss-Seidel pressure solve makes
  * the flow divergence-free. The particles take back the change in grid
@@ -14,7 +14,7 @@
  * damp noise).
  *
  * Units are cells and steps: positions run from 0.0 to the grid size per
- * axis, cell c spans [c, c + 1), velocities are cells per step. The can's
+ * axis, cell c spans [c, c + 1), velocities are cells per step. The hat's
  * axis runs up the middle of the grid. */
 #pragma once
 
@@ -50,36 +50,36 @@ typedef struct {
     float density[FLUID_CELLS];
     float tint[FLUID_CELLS];
     uint8_t count[FLUID_CELLS];
-    /* Per cell: whether it lies in the can, and which faces are open
+    /* Per cell: whether it lies in the hat, and which faces are open
      * (OPEN_* in fluid.c). Set by fluid_init. */
     uint8_t open[FLUID_CELLS];
-    /* Per face: open, wall, or outside the can (FACE_* in fluid.c). Set
+    /* Per face: open, wall, or outside the hat (FACE_* in fluid.c). Set
      * by fluid_init. */
     uint8_t face[3][FLUID_FACES];
     /* Particles per cell as linked lists, for pushing them apart: first
      * particle per cell, next in the same cell; UINT16_MAX ends a list. */
     uint16_t head[FLUID_CELLS];
     uint16_t next[FLUID_PARTICLES];
-    /* Rotation of the can per step (axis times radians), in can axes,
+    /* Rotation of the hat per step (axis times radians), in hat axes,
      * this step and the last. */
     vec3_t rotation;
     vec3_t last_rotation;
 } fluid_t;
 
-/* Empty the can and set up its walls. */
+/* Empty the hat and set up its walls. */
 void fluid_init(fluid_t *f);
 
-/* Fill the bottom half of the can's cells with particles at rest,
+/* Fill the bottom half of the hat's cells with particles at rest,
  * FLUID_PARTICLES_PER_CELL per cell. Tints run
  * across and up the fluid from -FLUID_TINT_SPREAD to +FLUID_TINT_SPREAD. */
 void fluid_populate(fluid_t *f);
 
-/* Advance one step. `accel` is gravity plus motion in g, in can axes,
+/* Advance one step. `accel` is gravity plus motion in g, in hat axes,
  * pointing the way the fluid falls. */
 void fluid_step(fluid_t *f, vec3_t accel);
 
-/* How far the can turned since the last step, as a rotation vector in
- * can axes. Applies to the following steps until set again. */
+/* How far the hat turned since the last step, as a rotation vector in
+ * hat axes. Applies to the following steps until set again. */
 void fluid_set_rotation(fluid_t *f, vec3_t rotation);
 
 /* Particle density at `pos`, blended from the nearest cell centres (rest

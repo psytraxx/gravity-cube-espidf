@@ -51,15 +51,15 @@ static float mean_radius(void)
     return sum / (float)f.n;
 }
 
-/* Whether `p` lies in a cell of the can: its centre within the can's
- * radius at its height, and below CAN_HEIGHT. */
+/* Whether `p` lies in a cell of the hat: its centre within the hat's
+ * radius at its height, and below HAT_HEIGHT. */
 static bool in_can(vec3_t p)
 {
-    if (p.x < 0.0f || p.y < 0.0f || p.z < 0.0f || floorf(p.z) + 0.5f >= CAN_HEIGHT) {
+    if (p.x < 0.0f || p.y < 0.0f || p.z < 0.0f || floorf(p.z) + 0.5f >= HAT_HEIGHT) {
         return false;
     }
     const float cx = floorf(p.x) + 0.5f, cy = floorf(p.y) + 0.5f, cz = floorf(p.z) + 0.5f;
-    return hypotf(cx - AXIS_X, cy - AXIS_Y) < can_radius_at(cz);
+    return hypotf(cx - AXIS_X, cy - AXIS_Y) < hat_radius_at(cz);
 }
 
 /* Highest particle: the surface. */
@@ -72,13 +72,13 @@ static float top(void)
     return z;
 }
 
-/* The grid holds the can, and has room for half a can of particles. */
+/* The grid holds the hat, and has room for half a hat of particles. */
 static void test_grid_fits_can(void)
 {
-    TEST_ASSERT_TRUE(2.0f * CAN_RADIUS_MAX <= FLUID_NX);
-    TEST_ASSERT_TRUE(2.0f * CAN_RADIUS_MAX <= FLUID_NY);
-    TEST_ASSERT_TRUE(CAN_HEIGHT <= FLUID_NZ);
-    TEST_ASSERT_TRUE(CAN_HEIGHT > FLUID_NZ - 1);
+    TEST_ASSERT_TRUE(2.0f * HAT_RADIUS_MAX <= FLUID_NX);
+    TEST_ASSERT_TRUE(2.0f * HAT_RADIUS_MAX <= FLUID_NY);
+    TEST_ASSERT_TRUE(HAT_HEIGHT <= FLUID_NZ);
+    TEST_ASSERT_TRUE(HAT_HEIGHT > FLUID_NZ - 1);
     TEST_ASSERT_LESS_THAN_INT(FLUID_PARTICLES, f.n);
 }
 
@@ -89,28 +89,28 @@ static void test_populate_fills_bottom_half(void)
     for (int i = 0; i < f.n; i++) {
         TEST_ASSERT_TRUE(in_can(f.p[i].pos));
     }
-    TEST_ASSERT_FLOAT_WITHIN(1.5f, CAN_HEIGHT / 2.0f, top());
+    TEST_ASSERT_FLOAT_WITHIN(1.5f, HAT_HEIGHT / 2.0f, top());
 }
 
 /* At rest the fluid stays in the bottom half and keeps its volume. */
 static void test_settles_in_bottom_half(void)
 {
     run(300, DOWN);
-    TEST_ASSERT_FLOAT_WITHIN(0.6f, CAN_HEIGHT / 4.0f, mean_position().z);
+    TEST_ASSERT_FLOAT_WITHIN(0.6f, HAT_HEIGHT / 4.0f, mean_position().z);
     TEST_ASSERT_FLOAT_WITHIN(0.5f, AXIS_X, mean_position().x);
     TEST_ASSERT_FLOAT_WITHIN(0.5f, AXIS_Y, mean_position().y);
-    TEST_ASSERT_FLOAT_WITHIN(1.5f, CAN_HEIGHT / 2.0f, top());
+    TEST_ASSERT_FLOAT_WITHIN(1.5f, HAT_HEIGHT / 2.0f, top());
 }
 
-/* Gravity along +x, the can on its side: the fluid lies along the +x side
- * of the wall, the full height of the can. */
+/* Gravity along +x, the hat on its side: the fluid lies along the +x side
+ * of the wall, the full height of the hat. */
 static void test_on_its_side_fluid_lies_along_the_wall(void)
 {
     run(300, (vec3_t){1.0f, 0.0f, 0.0f});
     const vec3_t m = mean_position();
     TEST_ASSERT_GREATER_THAN_FLOAT(AXIS_X + 0.6f, m.x);
     TEST_ASSERT_FLOAT_WITHIN(0.5f, AXIS_Y, m.y);
-    TEST_ASSERT_FLOAT_WITHIN(1.0f, CAN_HEIGHT / 2.0f, m.z);
+    TEST_ASSERT_FLOAT_WITHIN(1.0f, HAT_HEIGHT / 2.0f, m.z);
 }
 
 static void test_stays_inside_can_whichever_way_gravity_points(void)
@@ -166,7 +166,7 @@ static void test_pressure_solve_removes_divergence(void)
     TEST_ASSERT_LESS_THAN_FLOAT(0.05f, worst);
 }
 
-/* The can starts spinning about its axis: the fluid lags behind (on the +x
+/* The hat starts spinning about its axis: the fluid lags behind (on the +x
  * side it moves towards -y), and keeps out at the wall. */
 static void test_spin_lags_and_flings_outwards(void)
 {
@@ -192,13 +192,13 @@ static void test_tint_varies_across_fluid_and_with_speed(void)
 {
     float west, east, still;
     fluid_sample(&f, (vec3_t){AXIS_X - 1.5f, AXIS_Y, 0.5f}, &west);
-    fluid_sample(&f, (vec3_t){AXIS_X + 1.5f, AXIS_Y, 0.4f * CAN_HEIGHT}, &east);
+    fluid_sample(&f, (vec3_t){AXIS_X + 1.5f, AXIS_Y, 0.4f * HAT_HEIGHT}, &east);
     TEST_ASSERT_LESS_THAN_FLOAT(east - 20.0f, west);
     TEST_ASSERT_GREATER_OR_EQUAL_FLOAT(-FLUID_TINT_SPREAD, west);
     TEST_ASSERT_LESS_OR_EQUAL_FLOAT(FLUID_TINT_SPREAD, east);
 
     /* A push sideways: near the surface, where the fluid can move. */
-    const vec3_t near_top = {AXIS_X + 1.5f, AXIS_Y, 0.4f * CAN_HEIGHT};
+    const vec3_t near_top = {AXIS_X + 1.5f, AXIS_Y, 0.4f * HAT_HEIGHT};
     fluid_sample(&f, near_top, &still);
     for (int i = 0; i < 3; i++) {
         fluid_step(&f, (vec3_t){3.0f, 0.0f, 0.0f});

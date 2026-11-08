@@ -1,13 +1,13 @@
-/* The can's LEDs: where each sits on the spiral, and frames that show the
+/* The hat's LEDs: where each sits on the spiral, and frames that show the
  * fluid behind them.
  *
- * LED 0 sits on the +x side of the can (angle 0), on the bottom turn, or
- * the top one with CAN_START_AT_TOP. The strip runs counter-clockwise
- * seen from above (from +x towards +y), or clockwise with CAN_CLOCKWISE,
- * and climbs (or drops) CAN_ROW_PITCH LED spacings per turn. A turn holds
- * CAN_LEDS_PER_TURN_BOTTOM LEDs at the bottom and CAN_LEDS_PER_TURN_TOP
+ * LED 0 sits on the +x side of the hat (angle 0), on the bottom turn, or
+ * the top one with HAT_START_AT_TOP. The strip runs counter-clockwise
+ * seen from above (from +x towards +y), or clockwise with HAT_CLOCKWISE,
+ * and climbs (or drops) HAT_ROW_PITCH LED spacings per turn. A turn holds
+ * HAT_LEDS_PER_TURN_BOTTOM LEDs at the bottom and HAT_LEDS_PER_TURN_TOP
  * at the top, changing evenly in between; each LED sits on the circle of
- * the can's radius at its height. */
+ * the hat's radius at its height. */
 #pragma once
 
 #include <stdbool.h>
@@ -25,45 +25,45 @@ typedef struct {
 void frame_clear(frame_t *f);
 void frame_set_led(frame_t *f, int led, color_t color);
 
-/* Angle of LED `led` round the can in radians, counter-clockwise from +x
+/* Angle of LED `led` round the hat in radians, counter-clockwise from +x
  * seen from above, in [0, 2 pi). */
-float can_led_angle(int led);
+float hat_led_angle(int led);
 
 /* Height of LED `led` above the floor, in cells. */
-float can_led_height(int led);
+float hat_led_height(int led);
 
-/* Where LED `led` sits on the can's wall, in grid coordinates. */
-vec3_t can_led_pos(int led);
+/* Where LED `led` sits on the hat's wall, in grid coordinates. */
+vec3_t hat_led_pos(int led);
 
 /* The LED index, not rounded, `t` turns on from LED 0. */
-float can_led_at_turns(float t);
+float hat_led_at_turns(float t);
 
 /* Which LEDs show fluid. Each LED lights once the fluid density just
  * inside the wall in front of it reaches a threshold and goes dark again
  * below a lower one, so a still surface does not flicker. */
 typedef struct {
     bool lit[LED_COUNT];
-} can_view_t;
+} hat_view_t;
 
-void can_view_init(can_view_t *v);
+void hat_view_init(hat_view_t *v);
 
 /* Light every LED with fluid behind it in `hue` plus the fluid's tint
  * there, at `brightness` (0 to 1); the rest stay dark. */
-void can_view_frame(can_view_t *v, const fluid_t *f, uint32_t hue, float brightness,
+void hat_view_frame(hat_view_t *v, const fluid_t *f, uint32_t hue, float brightness,
                     frame_t *frame);
 
-/* Calibration picture. Four coloured lines run up the can, the LED
+/* Calibration picture. Four coloured lines run up the hat, the LED
  * nearest each angle on every turn: red at LED 0's angle (+x), then green
  * (+y), blue (-x) and yellow (-y) a quarter turn apart, counter-clockwise
  * seen from above. Straight lines mean the LEDs per turn are right, the
- * colour order that the winding direction is. While the can tilts, a
+ * colour order that the winding direction is. While the hat tilts, a
  * white band lights the side `accel` (in g, the way the fluid falls)
  * points to, under the lines. */
-void can_calibration_frame(frame_t *frame, vec3_t accel);
+void hat_calibration_frame(frame_t *frame, vec3_t accel);
 
-/* Strip ruler, for counting LEDs on the can: LED 0 red, every 100th LED
+/* Strip ruler, for counting LEDs on the hat: LED 0 red, every 100th LED
  * green, every 50th blue, every 10th white, the rest dark. The LED
  * straight above (or below) LED 0 on the next turn is the number of LEDs
  * in the first turn; the same next to the last LED gives the last turn's;
  * which way the white marks run from LED 0 gives the winding direction. */
-void can_ruler_frame(frame_t *frame);
+void hat_ruler_frame(frame_t *frame);

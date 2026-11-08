@@ -12,12 +12,12 @@
 #define MPU6500_SAMPLE_RATE_HZ 250
 #define MPU6500_SAMPLE_MS      (1000 / MPU6500_SAMPLE_RATE_HZ)
 
-/* Set up the bus, configure the chip and calibrate the gyro. The can
+/* Set up the bus, configure the chip and calibrate the gyro. The hat
  * should be still while this runs (about half a second). */
 esp_err_t mpu6500_init(void);
 
 /* Read up to `max` samples from the FIFO, oldest first, gyro bias removed,
- * turned by the IMU rotation in menuconfig into the can's axes.
+ * turned by the IMU rotation in menuconfig into the hat's axes.
  * Returns the number read, 0 if none are waiting or the FIFO overflowed
  * (it is then reset), or -1 on a bus error. */
 int mpu6500_read(imu_sample_t *out, int max);

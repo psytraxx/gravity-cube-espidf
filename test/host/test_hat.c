@@ -1,6 +1,6 @@
 #include <math.h>
 
-#include "can.h"
+#include "hat.h"
 #include "mpu6500_decode.h"
 #include "unity.h"
 
@@ -13,50 +13,50 @@ void tearDown(void) {}
  * strip is back at the same angle, a row higher. */
 static void test_spiral_climbs_one_row_per_turn(void)
 {
-    TEST_ASSERT_FLOAT_WITHIN(1e-5f, 0.0f, can_led_angle(0));
-    TEST_ASSERT_FLOAT_WITHIN(1e-5f, 0.5f * CAN_ROW_PITCH_CELLS, can_led_height(0));
-    for (int t = 1; t <= (int)CAN_TURNS; t++) {
-        const int led = (int)lrintf(can_led_at_turns((float)t));
-        const float a = can_led_angle(led);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, 0.0f, hat_led_angle(0));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, 0.5f * HAT_ROW_PITCH_CELLS, hat_led_height(0));
+    for (int t = 1; t <= (int)HAT_TURNS; t++) {
+        const int led = (int)lrintf(hat_led_at_turns((float)t));
+        const float a = hat_led_angle(led);
         TEST_ASSERT_TRUE(a < 0.1f || a > 2.0f * PI - 0.1f);
-        TEST_ASSERT_FLOAT_WITHIN(0.02f, (0.5f + (float)t) * CAN_ROW_PITCH_CELLS,
-                                 can_led_height(led));
+        TEST_ASSERT_FLOAT_WITHIN(0.02f, (0.5f + (float)t) * HAT_ROW_PITCH_CELLS,
+                                 hat_led_height(led));
     }
     /* A quarter turn on is on the +y side counter-clockwise from above,
      * the -y side clockwise. */
-    const vec3_t q = can_led_pos((int)lrintf(can_led_at_turns(0.25f)));
-    const float side = CAN_CLOCKWISE ? -1.0f : 1.0f;
-    TEST_ASSERT_GREATER_THAN_FLOAT(0.9f * can_radius_at(q.z), side * (q.y - FLUID_NY / 2.0f));
+    const vec3_t q = hat_led_pos((int)lrintf(hat_led_at_turns(0.25f)));
+    const float side = HAT_CLOCKWISE ? -1.0f : 1.0f;
+    TEST_ASSERT_GREATER_THAN_FLOAT(0.9f * hat_radius_at(q.z), side * (q.y - FLUID_NY / 2.0f));
 }
 
-/* The bottom turn holds CAN_LEDS_PER_TURN_BOTTOM LEDs, the top one
- * CAN_LEDS_PER_TURN_TOP, the strip ends after CAN_TURNS turns, and the
+/* The bottom turn holds HAT_LEDS_PER_TURN_BOTTOM LEDs, the top one
+ * HAT_LEDS_PER_TURN_TOP, the strip ends after HAT_TURNS turns, and the
  * wider end has the more LEDs a turn. */
 static void test_turns_shorten_as_the_can_narrows(void)
 {
-    TEST_ASSERT_FLOAT_WITHIN(0.5f, CAN_LEDS_PER_TURN_BOTTOM, can_led_at_turns(1.0f));
-    TEST_ASSERT_FLOAT_WITHIN(0.5f, CAN_LEDS_PER_TURN_TOP,
-                             can_led_at_turns(CAN_TURNS) - can_led_at_turns(CAN_TURNS - 1.0f));
-    TEST_ASSERT_FLOAT_WITHIN(0.01f, (float)LED_COUNT, can_led_at_turns(CAN_TURNS));
-    TEST_ASSERT_TRUE((can_radius_at(0.0f) >= can_radius_at(CAN_HEIGHT)) ==
-                     (CAN_LEDS_PER_TURN_BOTTOM >= CAN_LEDS_PER_TURN_TOP));
+    TEST_ASSERT_FLOAT_WITHIN(0.5f, HAT_LEDS_PER_TURN_BOTTOM, hat_led_at_turns(1.0f));
+    TEST_ASSERT_FLOAT_WITHIN(0.5f, HAT_LEDS_PER_TURN_TOP,
+                             hat_led_at_turns(HAT_TURNS) - hat_led_at_turns(HAT_TURNS - 1.0f));
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, (float)LED_COUNT, hat_led_at_turns(HAT_TURNS));
+    TEST_ASSERT_TRUE((hat_radius_at(0.0f) >= hat_radius_at(HAT_HEIGHT)) ==
+                     (HAT_LEDS_PER_TURN_BOTTOM >= HAT_LEDS_PER_TURN_TOP));
 }
 
-/* Every LED sits on the can's wall at its height, inside the grid. */
+/* Every LED sits on the hat's wall at its height, inside the grid. */
 static void test_every_led_on_the_wall(void)
 {
     for (int i = 0; i < LED_COUNT; i++) {
-        const vec3_t p = can_led_pos(i);
-        TEST_ASSERT_FLOAT_WITHIN(1e-3f, can_radius_at(p.z),
+        const vec3_t p = hat_led_pos(i);
+        TEST_ASSERT_FLOAT_WITHIN(1e-3f, hat_radius_at(p.z),
                                  hypotf(p.x - FLUID_NX / 2.0f, p.y - FLUID_NY / 2.0f));
-        TEST_ASSERT_TRUE(p.z > 0.0f && p.z < CAN_HEIGHT);
+        TEST_ASSERT_TRUE(p.z > 0.0f && p.z < HAT_HEIGHT);
         TEST_ASSERT_TRUE(p.x >= 0.0f && p.x <= FLUID_NX);
         TEST_ASSERT_TRUE(p.y >= 0.0f && p.y <= FLUID_NY);
     }
-    TEST_ASSERT_TRUE(can_led_height(LED_COUNT - 1) > can_led_height(LED_COUNT - 2));
+    TEST_ASSERT_TRUE(hat_led_height(LED_COUNT - 1) > hat_led_height(LED_COUNT - 2));
 }
 
-static int lit_count(const can_view_t *v)
+static int lit_count(const hat_view_t *v)
 {
     int n = 0;
     for (int i = 0; i < LED_COUNT; i++) {
@@ -65,7 +65,7 @@ static int lit_count(const can_view_t *v)
     return n;
 }
 
-/* A settled half-full can lights about the bottom half of the strip, every
+/* A settled half-full hat lights about the bottom half of the strip, every
  * lit LED in the hue's colour, and the picture holds still. */
 static void test_half_full_can_lights_bottom_half(void)
 {
@@ -76,10 +76,10 @@ static void test_half_full_can_lights_bottom_half(void)
     for (int i = 0; i < 300; i++) {
         fluid_step(&f, down);
     }
-    can_view_t v;
-    can_view_init(&v);
+    hat_view_t v;
+    hat_view_init(&v);
     frame_t frame;
-    can_view_frame(&v, &f, FLUID_HUE, 1.0f, &frame);
+    hat_view_frame(&v, &f, FLUID_HUE, 1.0f, &frame);
     const int lit = lit_count(&v);
     TEST_ASSERT_INT_WITHIN(LED_COUNT / 8, LED_COUNT / 2, lit);
     TEST_ASSERT_TRUE(v.lit[0]);
@@ -96,7 +96,7 @@ static void test_half_full_can_lights_bottom_half(void)
             before[i] = v.lit[i];
         }
         fluid_step(&f, down);
-        can_view_frame(&v, &f, FLUID_HUE, 1.0f, &frame);
+        hat_view_frame(&v, &f, FLUID_HUE, 1.0f, &frame);
         for (int i = 0; i < LED_COUNT; i++) {
             changes += v.lit[i] != before[i];
         }
@@ -116,17 +116,17 @@ static void test_tilt_lights_the_low_side(void)
     for (int i = 0; i < 300; i++) {
         fluid_step(&f, tilt);
     }
-    can_view_t v;
-    can_view_init(&v);
+    hat_view_t v;
+    hat_view_init(&v);
     frame_t frame;
-    can_view_frame(&v, &f, FLUID_HUE, 1.0f, &frame);
+    hat_view_frame(&v, &f, FLUID_HUE, 1.0f, &frame);
     float east = 0.0f, west = 0.0f;
     for (int i = 0; i < LED_COUNT; i++) {
         if (!v.lit[i]) {
             continue;
         }
-        const float a = can_led_angle(i);
-        const float z = can_led_height(i);
+        const float a = hat_led_angle(i);
+        const float z = hat_led_height(i);
         if (a < PI / 4.0f || a > 7.0f * PI / 4.0f) {
             east = fmaxf(east, z);
         } else if (a > 3.0f * PI / 4.0f && a < 5.0f * PI / 4.0f) {
@@ -146,7 +146,7 @@ static bool is(const frame_t *f, int led, uint8_t r, uint8_t g, uint8_t b)
 static void test_calibration_lines(void)
 {
     static frame_t f;
-    can_calibration_frame(&f, (vec3_t){0.0f, 0.0f, -1.0f});
+    hat_calibration_frame(&f, (vec3_t){0.0f, 0.0f, -1.0f});
     int count[4] = {0, 0, 0, 0}, other = 0;
     for (int i = 0; i < LED_COUNT; i++) {
         if (is(&f, i, 60, 0, 0)) {
@@ -162,15 +162,15 @@ static void test_calibration_lines(void)
         }
     }
     for (int q = 0; q < 4; q++) {
-        TEST_ASSERT_INT_WITHIN(1, (int)CAN_TURNS, count[q]);
+        TEST_ASSERT_INT_WITHIN(1, (int)HAT_TURNS, count[q]);
     }
     TEST_ASSERT_EQUAL_INT(0, other);
     TEST_ASSERT_TRUE(is(&f, 0, 60, 0, 0));
     /* A quarter turn on: green (+y) counter-clockwise, yellow (-y)
      * clockwise. */
-    const int quarter = (int)floorf(can_led_at_turns(0.25f) + 0.5f);
-    TEST_ASSERT_TRUE(CAN_CLOCKWISE ? is(&f, quarter, 30, 30, 0) : is(&f, quarter, 0, 60, 0));
-    TEST_ASSERT_TRUE(is(&f, (int)floorf(can_led_at_turns(3.5f) + 0.5f), 0, 0, 60));
+    const int quarter = (int)floorf(hat_led_at_turns(0.25f) + 0.5f);
+    TEST_ASSERT_TRUE(HAT_CLOCKWISE ? is(&f, quarter, 30, 30, 0) : is(&f, quarter, 0, 60, 0));
+    TEST_ASSERT_TRUE(is(&f, (int)floorf(hat_led_at_turns(3.5f) + 0.5f), 0, 0, 60));
 }
 
 /* Tilted so the fluid falls towards +y: the white band lights LEDs on the
@@ -178,17 +178,17 @@ static void test_calibration_lines(void)
 static void test_calibration_band_follows_tilt(void)
 {
     static frame_t f;
-    can_calibration_frame(&f, (vec3_t){0.0f, 0.5f, -0.85f});
+    hat_calibration_frame(&f, (vec3_t){0.0f, 0.5f, -0.85f});
     int plus_y = 0, minus_y = 0;
     for (int i = 0; i < LED_COUNT; i++) {
         if (!is(&f, i, 20, 20, 20)) {
             continue;
         }
-        const float a = can_led_angle(i);
+        const float a = hat_led_angle(i);
         plus_y += a > PI / 4.0f && a < 3.0f * PI / 4.0f;
         minus_y += a > 5.0f * PI / 4.0f && a < 7.0f * PI / 4.0f;
     }
-    TEST_ASSERT_GREATER_THAN_INT(3 * (int)CAN_TURNS, plus_y);
+    TEST_ASSERT_GREATER_THAN_INT(3 * (int)HAT_TURNS, plus_y);
     TEST_ASSERT_EQUAL_INT(0, minus_y);
 }
 
@@ -197,7 +197,7 @@ static void test_calibration_band_follows_tilt(void)
 static void test_ruler(void)
 {
     static frame_t f;
-    can_ruler_frame(&f);
+    hat_ruler_frame(&f);
     TEST_ASSERT_TRUE(is(&f, 0, 60, 0, 0));
     TEST_ASSERT_TRUE(is(&f, 10, 20, 20, 20));
     TEST_ASSERT_TRUE(is(&f, 50, 0, 0, 60));

@@ -57,10 +57,10 @@ static const char *TAG = "mpu6500";
 
 static vec3_t s_gyro_bias;
 
-/* The board's turn about the can's axis, undone on every sample: LED 0's
- * side lies CONFIG_CAN_IMU_YAW_DEG counter-clockwise (seen from above)
+/* The board's turn about the hat's axis, undone on every sample: LED 0's
+ * side lies CONFIG_HAT_IMU_YAW_DEG counter-clockwise (seen from above)
  * of the board's X arrow, and every reading turns back by as much. */
-#define YAW_RAD ((float)CONFIG_CAN_IMU_YAW_DEG * 3.14159265f / 180.0f)
+#define YAW_RAD ((float)CONFIG_HAT_IMU_YAW_DEG * 3.14159265f / 180.0f)
 
 /* All registers are good for 1 MHz; only the sensor registers take 20. */
 #define SPI_HZ 1000000
@@ -73,9 +73,9 @@ static uint8_t s_rx[1 + FIFO_SIZE] __attribute__((aligned(4)));
 static esp_err_t bus_init(void)
 {
     const spi_bus_config_t bus = {
-        .mosi_io_num = CONFIG_CAN_IMU_SPI_MOSI,
-        .miso_io_num = CONFIG_CAN_IMU_SPI_MISO,
-        .sclk_io_num = CONFIG_CAN_IMU_SPI_SCLK,
+        .mosi_io_num = CONFIG_HAT_IMU_SPI_MOSI,
+        .miso_io_num = CONFIG_HAT_IMU_SPI_MISO,
+        .sclk_io_num = CONFIG_HAT_IMU_SPI_SCLK,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
         .max_transfer_sz = sizeof s_tx,
@@ -84,7 +84,7 @@ static esp_err_t bus_init(void)
     const spi_device_interface_config_t dev = {
         .clock_speed_hz = SPI_HZ,
         .mode = 3,
-        .spics_io_num = CONFIG_CAN_IMU_SPI_CS,
+        .spics_io_num = CONFIG_HAT_IMU_SPI_CS,
         .queue_size = 1,
     };
     return spi_bus_add_device(SPI3_HOST, &dev, &s_spi);
@@ -128,18 +128,18 @@ static esp_err_t fifo_reset(void)
     return write_reg(REG_USER_CTRL, USER_I2C_IF_DIS | USER_FIFO_EN);
 }
 
-#if CONFIG_CAN_IMU_I2C_SCAN
+#if CONFIG_HAT_IMU_I2C_SCAN
 /* Log every address that acknowledges, on the SPI pins used as I2C. */
 static void i2c_scan(void)
 {
     /* High before it is driven, so NCS never dips low on the way. */
-    gpio_set_level(CONFIG_CAN_IMU_SPI_CS, 1);
-    gpio_set_direction(CONFIG_CAN_IMU_SPI_CS, GPIO_MODE_OUTPUT);
+    gpio_set_level(CONFIG_HAT_IMU_SPI_CS, 1);
+    gpio_set_direction(CONFIG_HAT_IMU_SPI_CS, GPIO_MODE_OUTPUT);
 
     const i2c_master_bus_config_t cfg = {
         .i2c_port = -1,
-        .sda_io_num = CONFIG_CAN_IMU_SPI_MOSI,
-        .scl_io_num = CONFIG_CAN_IMU_SPI_SCLK,
+        .sda_io_num = CONFIG_HAT_IMU_SPI_MOSI,
+        .scl_io_num = CONFIG_HAT_IMU_SPI_SCLK,
         .clk_source = I2C_CLK_SRC_DEFAULT,
         .glitch_ignore_cnt = 7,
         .flags.enable_internal_pullup = true,
@@ -156,15 +156,15 @@ static void i2c_scan(void)
             found++;
         }
     }
-    ESP_LOGI(TAG, "I2C scan: %d device(s) on SDA %d, SCL %d", found, CONFIG_CAN_IMU_SPI_MOSI,
-             CONFIG_CAN_IMU_SPI_SCLK);
+    ESP_LOGI(TAG, "I2C scan: %d device(s) on SDA %d, SCL %d", found, CONFIG_HAT_IMU_SPI_MOSI,
+             CONFIG_HAT_IMU_SPI_SCLK);
     i2c_del_master_bus(bus);
 }
 #endif
 
 esp_err_t mpu6500_init(void)
 {
-#if CONFIG_CAN_IMU_I2C_SCAN
+#if CONFIG_HAT_IMU_I2C_SCAN
     i2c_scan();
 #endif
     ESP_RETURN_ON_ERROR(bus_init(), TAG, "bus");

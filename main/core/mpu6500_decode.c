@@ -13,7 +13,7 @@ static vec3_t to_can(const float s[3])
 }
 
 /* The accelerometer measures the push opposite to gravity, which the axis
- * map turns around, so the map is minus the sensor-to-can transform T.
+ * map turns around, so the map is minus the sensor-to-hat transform T.
  * Rotation rate is an axial vector and maps as det(T) * T: with det(-T) =
  * -det(T) for 3x3, that is det(map) * map. */
 static float map_det(void)

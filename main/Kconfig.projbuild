@@ -1,6 +1,6 @@
-menu "Gravity can"
+menu "Gravity hat"
 
-config CAN_LED_GPIO
+config HAT_LED_GPIO
     int "LED data GPIO"
     default 13
     help
@@ -8,7 +8,7 @@ config CAN_LED_GPIO
         resistor. GPIO 13 is not a strapping pin, and sits next to GND
         and near 5V on the board's header.
 
-config CAN_FRAME_MS
+config HAT_FRAME_MS
     int "Physics step period (ms)"
     default 18
     range 5 100
@@ -18,34 +18,23 @@ config CAN_FRAME_MS
         15 ms per frame, and a fluid step about as long; the status log
         shows both. Raise the period if the physics runs over it.
 
-config CAN_LED_TEST
-    bool "LED test at power on"
-    default y
-    help
-        Before the fluid starts, fill the strip green from the data input
-        on, five LEDs at a time (about 2 seconds), then light one LED per
-        turn at LED 0's angle for 2 seconds. The second picture is a
-        straight line up the can if the LEDs per turn in
-        main/core/config.h are right, and marks where the IMU's X axis
-        has to point.
-
-config CAN_CALIBRATION
+config HAT_CALIBRATION
     bool "Calibration picture instead of the fluid"
     default n
     help
-        For setting up the strip's geometry and the IMU: after the LED
-        test, show a calibration picture instead of the fluid. Four
-        coloured lines run up the can, one LED per turn each: red at LED
+        For setting up the strip's geometry and the IMU: show a
+        calibration picture instead of the fluid. Four
+        coloured lines run up the hat, one LED per turn each: red at LED
         0's angle, then green, blue and yellow a quarter turn apart. They
         stand straight if the LEDs per turn in main/core/config.h are
         right, and run red, green, blue, yellow counter-clockwise seen
-        from above if the winding direction is. Tilt the can and a white
+        from above if the winding direction is. Tilt the hat and a white
         band lights the low side, where the fluid would run: if it lights
-        the wrong side on an axis, flip that axis in MPU6500_AXIS_MAP.
+        the wrong side, set the IMU rotation (below).
         A double tap switches to a ruler for counting LEDs (LED 0 red,
         every 100th green, every 50th blue, every 10th white) and back.
 
-config CAN_TAP_THRESHOLD_MG
+config HAT_TAP_THRESHOLD_MG
     int "Tap threshold (mg)"
     default 1000
     range 300 4000
@@ -54,37 +43,37 @@ config CAN_TAP_THRESHOLD_MG
         as a tap. Raise it if sloshing the fluid changes its colour, lower
         it if double taps are missed.
 
-config CAN_IMU_SPI_MOSI
+config HAT_IMU_SPI_MOSI
     int "SPI MOSI GPIO (board SDA/SDI)"
     default 23
 
-config CAN_IMU_SPI_MISO
+config HAT_IMU_SPI_MISO
     int "SPI MISO GPIO (board AD0/SDO)"
     default 19
 
-config CAN_IMU_SPI_SCLK
+config HAT_IMU_SPI_SCLK
     int "SPI SCLK GPIO (board SCL)"
     default 18
 
-config CAN_IMU_SPI_CS
+config HAT_IMU_SPI_CS
     int "SPI CS GPIO (board NCS)"
     default 5
 
-config CAN_IMU_YAW_DEG
+config HAT_IMU_YAW_DEG
     int "IMU rotation (degrees)"
     default 0
     range 0 359
     help
-        Where LED 0's side of the can lies as the IMU board sees it: in
+        Where LED 0's side of the hat lies as the IMU board sees it: in
         degrees counter-clockwise (seen from above) from the board's X
         arrow. The firmware turns every reading back by as much. To find
         it, turn on the calibration picture with this at 0 and tip the
-        can so that LED 0's side (the red line) is lowest. The white band
+        hat so that LED 0's side (the red line) is lowest. The white band
         then lights the side the setting points at: on the green line it
         is 90, on the blue 180, on the yellow 270. The monitor logs it
         exactly as "low side at N deg" (add 360 if N is negative).
 
-config CAN_IMU_I2C_SCAN
+config HAT_IMU_I2C_SCAN
     bool "Scan for I2C devices on the IMU pins at startup"
     default n
     help
@@ -97,7 +86,7 @@ config CAN_IMU_I2C_SCAN
 
 menu "Microphone"
 
-config CAN_MIC
+config HAT_MIC
     bool "Pulse the brightness with the sound"
     default y
     help
@@ -108,24 +97,24 @@ config CAN_MIC
         music alike. Without a microphone sending, the fluid stays at
         full brightness.
 
-config CAN_MIC_SD
+config HAT_MIC_SD
     int "Microphone SD (data) GPIO"
-    depends on CAN_MIC
+    depends on HAT_MIC
     default 32
 
-config CAN_MIC_SCK
+config HAT_MIC_SCK
     int "Microphone SCK (bit clock) GPIO"
-    depends on CAN_MIC
+    depends on HAT_MIC
     default 33
 
-config CAN_MIC_WS
+config HAT_MIC_WS
     int "Microphone WS (word select) GPIO"
-    depends on CAN_MIC
+    depends on HAT_MIC
     default 25
 
-config CAN_MIC_MIN_BRIGHTNESS
+config HAT_MIC_MIN_BRIGHTNESS
     int "Brightness in the quiet (%)"
-    depends on CAN_MIC
+    depends on HAT_MIC
     default 25
     range 0 100
     help
@@ -136,32 +125,32 @@ endmenu
 
 menu "Wi-Fi and firmware updates"
 
-config CAN_WIFI_SSID
+config HAT_WIFI_SSID
     string "Wi-Fi SSID"
     default ""
     help
         Network to join for firmware updates over Wi-Fi. Empty turns Wi-Fi
         off, and with it updates over Wi-Fi.
 
-config CAN_WIFI_PASSWORD
+config HAT_WIFI_PASSWORD
     string "Wi-Fi password"
     default ""
     help
         Empty for an open network.
 
-config CAN_HOSTNAME
+config HAT_HOSTNAME
     string "Hostname"
-    default "can"
+    default "hat"
     help
-        DHCP and mDNS name: the can answers at http://<hostname>.local/.
+        DHCP and mDNS name: the hat answers at http://<hostname>.local/.
 
-config CAN_OTA_TOKEN
+config HAT_OTA_TOKEN
     string "Update token"
     default ""
     help
         If set, an update must carry the header
         "Authorization: Bearer <token>". Empty lets anyone on the network
-        update the can.
+        update the hat.
 
 endmenu
 

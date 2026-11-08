@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 760" width="1180" height="760" font-family="Helvetica, Arial, sans-serif" font-size="13">
-  <title>Gravity can pinout</title>
+  <title>Gravity hat pinout</title>
   <rect width="1180" height="760" fill="#ffffff"/>
   <text x="20" y="30" font-weight="bold" font-size="15">ESP32-WROOM-32 board, 38 pins, as in its pinout picture</text>
   <path d="M628 110 H660 V75 H260" fill="none" stroke="#ef6c00" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>

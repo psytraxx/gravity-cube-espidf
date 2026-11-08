@@ -1,15 +1,15 @@
-# Gravity can (ESP-IDF)
+# Gravity hat (ESP-IDF)
 
-Firmware for a can of light: a WS2812B strip wound in a spiral round a
-cylinder (here a hat's crown) shows the liquid inside it. Tilt the can
-and the surface tilts; shake it and the fluid sloshes; lay it on its
+Firmware for a hat of light: a WS2812B strip wound in a spiral round a
+hat's crown shows a liquid inside it. Tilt the hat and the surface
+tilts; shake it and the fluid sloshes; lay it on its
 side and the fluid runs along the low side. Its brightness pulses with
 the sound around it, and a double tap gives the fluid a new, random
 colour.
 
 It runs on an ESP32-WROOM-32 with an MPU-6500 IMU and an I2S
-microphone, and is written in C for ESP-IDF 6.1. The physics is a port of the fluid solver in
-[gravity-cube-rs](https://github.com/psytraxx/gravity-cube-rs).
+microphone, and is written in C for ESP-IDF 6.1. The physics is a port
+of the fluid solver in [gravity-cube-rs](https://github.com/psytraxx/gravity-cube-rs).
 
 ## Hardware
 
@@ -102,27 +102,27 @@ GPIO 13.
 
 The firmware places every LED from a few numbers in
 [`main/core/config.h`](main/core/config.h); [Setting up a
-can](#setting-up-a-can) shows how to read them off. For this hat:
+hat](#setting-up-a-hat) shows how to read them off. For this hat:
 
 | Setting | Value | |
 |---|---|---|
-| `CAN_LEDS_PER_TURN_BOTTOM` | 39 | LEDs in the bottom turn |
-| `CAN_LEDS_PER_TURN_TOP` | 36.8 | LEDs in the top turn; fewer than at the bottom where the can narrows |
-| `CAN_ROW_PITCH` | 0.65 | Distance between two turns, divided by the distance between two LEDs along the strip |
-| `CAN_LED_SPACING_MM` | 10 | Distance between two LEDs along the strip; sets how fast the fluid moves |
-| `CAN_START_AT_TOP` | 0 | 1 if the data enters at the top turn |
-| `CAN_CLOCKWISE` | 1 | 1 if the strip winds clockwise seen from above |
+| `HAT_LEDS_PER_TURN_BOTTOM` | 39 | LEDs in the bottom turn |
+| `HAT_LEDS_PER_TURN_TOP` | 36.8 | LEDs in the top turn; fewer than at the bottom where the hat narrows |
+| `HAT_ROW_PITCH` | 0.65 | Distance between two turns, divided by the distance between two LEDs along the strip |
+| `HAT_LED_SPACING_MM` | 10 | Distance between two LEDs along the strip; sets how fast the fluid moves |
+| `HAT_START_AT_TOP` | 0 | 1 if the data enters at the top turn |
+| `HAT_CLOCKWISE` | 1 | 1 if the strip winds clockwise seen from above |
 
-The LEDs per turn change evenly from bottom to top, so a can that
+The LEDs per turn change evenly from bottom to top, so a hat that
 narrows works too; from 39 down to 36.8 a turn, 500 LEDs make about
-13 turns. The can's radius at each height follows from its LEDs per turn
-there. The grid round the can (`FLUID_NX`, `FLUID_NY`, `FLUID_NZ`) has
+13 turns. The hat's radius at each height follows from its LEDs per turn
+there. The grid round the hat (`FLUID_NX`, `FLUID_NY`, `FLUID_NZ`) has
 to hold it: the host tests check, and fail if a new geometry needs a
 bigger grid.
 
-The IMU board lies flat on the can's lid or floor, chip side up, its X
+The IMU board lies flat in the hat's crown, chip side up, its X
 arrow pointing any way round: *IMU rotation* in menuconfig says which,
-and the firmware turns its readings into the can's axes. Mounted on its
+and the firmware turns its readings into the hat's axes. Mounted on its
 side or upside down, edit `MPU6500_AXIS_MAP` in
 [`main/core/mpu6500_decode.h`](main/core/mpu6500_decode.h).
 
@@ -138,47 +138,40 @@ idf.py build
 idf.py -p /dev/ttyUSB0 flash monitor
 ```
 
-At power on, before the fluid starts, the strip fills green from the
-data input, five LEDs at a time (about 2 s): a dark LED, or every LED
-from one point on, shows a dead LED or a broken strip. Then one LED per
-turn lights, the one nearest LED 0's angle, for 2 s: a straight line up
-the can if the LEDs per turn are right, and where the IMU's X axis
-points.
-
-Keep the can still from the end of the LED test until a second later:
-the gyro calibrates its zero offset then.
+Keep the hat still for the first second after power on: the gyro
+calibrates its zero offset then.
 
 The monitor logs a status line every 100 frames: acceleration,
 rotation rate, sound level and brightness, and the physics, frame and
 LED send times.
 
-## Setting up a can
+## Setting up a hat
 
 The firmware has to know where every LED sits and how the IMU lies. For
-a new can, or after rewinding the strip:
+a new hat, or after rewinding the strip:
 
-1. **Calibration picture on.** In `idf.py menuconfig` → *Gravity can*,
+1. **Calibration picture on.** In `idf.py menuconfig` → *Gravity hat*,
    turn on *Calibration picture instead of the fluid*, then build and
-   flash. After the LED test the can shows four coloured lines; a double
-   tap switches to a ruler and back. Updates over Wi-Fi keep working, so
+   flash. The hat shows four coloured lines; a double tap switches to a
+   ruler and back. Updates over Wi-Fi keep working, so
    the steps below can be flashed over the network.
 2. **Read the strip off the ruler.** It lights LED 0 red, every 100th
    LED green, every 50th blue and every 10th white. Note:
-   - the turn LED 0 is in, bottom or top: `CAN_START_AT_TOP`;
+   - the turn LED 0 is in, bottom or top: `HAT_START_AT_TOP`;
    - which way the marks run from LED 0, seen from above:
-     `CAN_CLOCKWISE`;
+     `HAT_CLOCKWISE`;
    - the LED straight above (or below) LED 0, one row on, counted from
      the white mark before it (two past the 30 mark is 32): the LEDs in
      the first turn;
    - the LED straight beside the strip's last LED, one row back,
      subtracted from the last LED's number: the LEDs in the last turn;
    - the distance between two rows over the distance between two LEDs
-     along the strip: `CAN_ROW_PITCH`;
-   - 1000 over the strip's LEDs per metre: `CAN_LED_SPACING_MM`.
+     along the strip: `HAT_ROW_PITCH`;
+   - 1000 over the strip's LEDs per metre: `HAT_LED_SPACING_MM`.
 
    Set them in [`main/core/config.h`](main/core/config.h), run the host
    tests (they fail if the grid needs to grow), build and flash.
-3. **Straighten the lines.** Four lines run up the can, one LED per
+3. **Straighten the lines.** Four lines run up the hat, one LED per
    turn: red at LED 0's angle, then green, blue and yellow a quarter turn
    apart, counter-clockwise seen from above. Where the LEDs per turn are
    not a whole number they step half an LED from side to side; past that
@@ -190,10 +183,10 @@ a new can, or after rewinding the strip:
    more a turn at one end moves the far end of the line about 0.65 LEDs,
    at both ends about 1.3. Counting by hand is seldom exact; a few rounds
    of looking at the lines settle it.
-4. **Mount the IMU and set its rotation.** Lay the board flat on the
-   can's lid or floor, chip side up, its X arrow pointing any way round.
-   Tilt the can and a white band lights the side the firmware takes for
-   low. With *IMU rotation* at 0, tip the can so that LED 0's side (the
+4. **Mount the IMU and set its rotation.** Lay the board flat in the
+   hat's crown, chip side up, its X arrow pointing any way round.
+   Tilt the hat and a white band lights the side the firmware takes for
+   low. With *IMU rotation* at 0, tip the hat so that LED 0's side (the
    red line) is lowest: the band lights the side the setting points at,
    a quarter turn per line, counter-clockwise seen from above: on the
    green line 90, on the blue 180, on the yellow 270, in between in
@@ -211,9 +204,9 @@ rows 0.65 LED spacings apart.
 
 ## Updates over Wi-Fi
 
-Once the can has been flashed over USB with a Wi-Fi SSID set, it takes
+Once the hat has been flashed over USB with a Wi-Fi SSID set, it takes
 new firmware over the network. Set the SSID and password (and, ideally,
-an update token) in `idf.py menuconfig` → *Gravity can* → *Wi-Fi and
+an update token) in `idf.py menuconfig` → *Gravity hat* → *Wi-Fi and
 firmware updates*, flash over USB once, then for every update:
 
 ```bash
@@ -222,28 +215,28 @@ idf.py build
 
 ```bash
 curl -H "Authorization: Bearer $TOKEN" \
-     --data-binary @build/gravity-can.bin http://can.local/ota
+     --data-binary @build/gravity-hat.bin http://hat.local/ota
 ```
 
-`curl http://can.local/` shows the running version (from `git
-describe`) and app slot. If `can.local` does not resolve, use the IP
+`curl http://hat.local/` shows the running version (from `git
+describe`) and app slot. If `hat.local` does not resolve, use the IP
 address the monitor logs once Wi-Fi is up.
 
 ```mermaid
 sequenceDiagram
     participant PC
-    participant Can
+    participant Hat
     participant Boot as Bootloader
-    PC->>Can: POST /ota (app image)
-    Can->>Can: write image to the other slot, check it
-    Can-->>PC: Update written, restarting
-    Can->>Boot: restart
-    Boot->>Can: boot new image (pending)
-    Can->>Can: Wi-Fi up and 100 frames run within 2 min?
+    PC->>Hat: POST /ota (app image)
+    Hat->>Hat: write image to the other slot, check it
+    Hat-->>PC: Update written, restarting
+    Hat->>Boot: restart
+    Boot->>Hat: boot new image (pending)
+    Hat->>Hat: Wi-Fi up and 100 frames run within 2 min?
     alt yes
-        Can->>Boot: keep new image
+        Hat->>Boot: keep new image
     else no, or it crashes first
-        Boot->>Can: boot previous image
+        Boot->>Hat: boot previous image
     end
 ```
 
@@ -252,7 +245,7 @@ the running firmware writes the new image into the other one and boots
 it. A new image only stays if it gets onto the network and runs the main
 loop for 100 frames within two minutes; if not, or if it crashes first,
 the bootloader goes back to the previous image. So a broken build cannot
-cut the can off from further updates, but one built with no SSID turns
+cut the hat off from further updates, but one built with no SSID turns
 updates off for good, until the next USB flash.
 
 Wi-Fi, the network stack and the update server run on core 1, next to
@@ -260,27 +253,26 @@ the LED task, so the physics on core 0 keeps its time. Flash writes
 pause both cores for moments at a time, so the fluid stutters for the
 few seconds an update takes.
 
-Without a token, anyone on the network can reflash the can.
+Without a token, anyone on the network hat reflash the hat.
 
 ## Settings
 
-`idf.py menuconfig` → *Gravity can*:
+`idf.py menuconfig` → *Gravity hat*:
 
 | Setting | Default | |
 |---|---|---|
 | LED data GPIO | 13 | |
 | Physics step period | 18 ms | The physics constants are per step |
-| LED test at power on | on | Fills the strip, then shows LED 0's line up the can (~4 s) |
-| Calibration picture | off | Instead of the fluid: lines for the geometry, a band for the IMU, a ruler on a double tap; see [Setting up a can](#setting-up-a-can) |
+| Calibration picture | off | Instead of the fluid: lines for the geometry, a band for the IMU, a ruler on a double tap; see [Setting up a hat](#setting-up-a-hat) |
 | Tap threshold | 1000 mg | Raise it if sloshing changes the colour, lower it if taps are missed |
 | IMU SPI pins | 23, 19, 18, 5 | MOSI, MISO, SCLK, CS |
-| IMU rotation | 0° | Where LED 0's side lies seen from the IMU board's X arrow, counter-clockwise; see [Setting up a can](#setting-up-a-can) |
+| IMU rotation | 0° | Where LED 0's side lies seen from the IMU board's X arrow, counter-clockwise; see [Setting up a hat](#setting-up-a-hat) |
 | I2C scan at startup | off | Wiring check: probes the IMU pins as I2C; finds the MPU-6500 at 0x68/0x69 after a power on |
 | Pulse the brightness with the sound | on | Reads the I2S microphone |
 | Microphone pins | 32, 33, 25 | SD, SCK, WS |
 | Brightness in the quiet | 25 % | Loud sounds pulse it up to full |
 | Wi-Fi SSID, password | empty | Network for updates over Wi-Fi; an empty SSID turns Wi-Fi off |
-| Hostname | can | Answers at `http://can.local/` |
+| Hostname | hat | Answers at `http://hat.local/` |
 | Update token | empty | Updates need `Authorization: Bearer <token>`; empty lets anyone on the network update |
 
 The strip's geometry and the fluid's colour are in
@@ -306,7 +298,7 @@ step and builds the frame. **Core 1** sends frames to the strip with
 Espressif's [led_strip](https://components.espressif.com/components/espressif/led_strip)
 component over RMT (~15 ms for 500 LEDs); the two overlap, and core 0
 only waits if core 1 is still sending. Unchanged frames are not re-sent,
-so a settled can in the quiet, or with no microphone, keeps the data
+so a settled hat in the quiet, or with no microphone, keeps the data
 line quiet.
 
 **IMU.** The MPU-6500 samples accelerometer (±4 g) and gyro (±1000 °/s)
@@ -314,8 +306,8 @@ at 250 Hz into its FIFO. Each frame uses the mean acceleration and the
 gyro integrated over all samples since the last frame.
 
 **Motion filter.** A complementary filter tracks gravity: the gyro turns
-the estimate as the can tilts, and the accelerometer slowly corrects it.
-Whatever acceleration is left over is the can's own motion, and is
+the estimate as the hat tilts, and the accelerometer slowly corrects it.
+Whatever acceleration is left over is the hat's own motion, and is
 tripled before reaching the fluid, so shaking sloshes it but tilting does
 not overshoot.
 
@@ -344,12 +336,12 @@ beats over loud music still pulse.
 **Fluid.** An incompressible FLIP fluid: inviscid Navier-Stokes on a
 staggered grid of 9 × 9 × 7 cells, each 1.4 LED spacings across, about
 2 rows high (coarser cells would look blockier, finer ones cost too
-much time on an ESP32). The can is the cells whose centres lie within
+much time on an ESP32). The hat is the cells whose centres lie within
 its radius at their height and below its top: 7 layers of 61 cells,
 narrowing to 57 at the top, as round as cells that size allow; its
-walls are their outer faces. Faces with no cell of the can on either
+walls are their outer faces. Faces with no cell of the hat on either
 side take no part, as faces beyond the grid's edge do. Each step the
-particles take gravity and the forces of the turning can (Euler,
+particles take gravity and the forces of the turning hat (Euler,
 Coriolis, centrifugal), hand their velocity to the grid, and a
 Gauss-Seidel pressure solve (60 passes) makes the flow divergence-free
 against the walls. The particles take back the change (80 % FLIP, 20 %
@@ -357,15 +349,15 @@ PIC to damp noise), move, and are pushed apart so they stay evenly
 spread; cells packed above two particles get a little outflow, so the
 fluid keeps its volume. About 370 particles fill the bottom half.
 
-A can is closed and narrow, so shoving it sideways only presses on the
-fluid: it moves where it has a free surface to move into. Spun about
-its axis, the fluid mostly stays put while the can turns round it, as
+The fluid's hat is closed and narrow, so shoving it sideways only
+presses on the fluid: it moves where it has a free surface to move into. Spun about
+its axis, the fluid mostly stays put while the hat turns round it, as
 liquid in a glass does at first.
 
 **LEDs.** Each LED's place on the spiral follows from its index: the
 LEDs per turn change evenly from 39 at the bottom to 36.8 at the top, so
 LED *i* sits where the LEDs counted so far reach *i*, clockwise from
-LED 0 and climbing a row a turn, on the circle of the can's radius at
+LED 0 and climbing a row a turn, on the circle of the hat's radius at
 that height. It shows the fluid half a cell inside the wall in front of
 it, blended from the nearest cell centres: it lights once the density
 there reaches 1.0 and goes dark below 0.4, so a still surface does not
@@ -377,7 +369,7 @@ than steps.
 
 | Path | |
 |---|---|
-| `main/main.c` | Main loop on core 0, LED task on core 1, LED test, calibration picture |
+| `main/main.c` | Main loop on core 0, LED task on core 1, calibration picture |
 | `main/ota.c` | Wi-Fi, mDNS and the update server on core 1; keeps or rolls back a new image |
 | `main/mpu6500.c` | MPU-6500 over SPI: setup, gyro calibration, FIFO reads |
 | `main/mic.c` | I2S microphone on core 1: the loudness of the latest 20 ms |

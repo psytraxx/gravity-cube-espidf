@@ -33,10 +33,10 @@ jobs:
       - name: Upload firmware
         uses: actions/upload-artifact@v7
         with:
-          name: gravity-can
+          name: gravity-hat
           path: |
             build/bootloader/bootloader.bin
             build/partition_table/partition-table.bin
-            build/gravity-can.bin
+            build/gravity-hat.bin
             build/flash_args
           if-no-files-found: error

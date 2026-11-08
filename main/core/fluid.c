@@ -7,11 +7,11 @@
 #define NY FLUID_NY
 #define NZ FLUID_NZ
 
-/* Centre of the can's round wall, across the grid. */
+/* Centre of the hat's round wall, across the grid. */
 #define AXIS_X (NX / 2.0f)
 #define AXIS_Y (NY / 2.0f)
 
-/* Multiplier on the can's rotation forces (Euler, Coriolis, centrifugal).
+/* Multiplier on the hat's rotation forces (Euler, Coriolis, centrifugal).
  * 1.0 is the real thing. */
 #define ROTATION_GAIN 1.0f
 
@@ -23,7 +23,7 @@
 #define SEPARATION_PASSES 1
 
 /* Gauss-Seidel passes of the pressure solve, and its over-relaxation. The
- * can's 14-cell column needs 50 passes to settle still. */
+ * hat's 14-cell column needs 50 passes to settle still. */
 #define PRESSURE_ITERATIONS 60
 #define OVER_RELAXATION     1.9f
 
@@ -37,13 +37,13 @@
 
 #define NONE UINT16_MAX
 
-/* A cell's flags in fluid_t.open: whether it lies in the can, and which
- * of its faces are open, with cells in the can on both sides. Closed
- * faces are the can's walls. */
+/* A cell's flags in fluid_t.open: whether it lies in the hat, and which
+ * of its faces are open, with cells in the hat on both sides. Closed
+ * faces are the hat's walls. */
 #define OPEN_IN 0x40
 
-/* A face, in fluid_t.face: between two cells of the can, a wall (one cell
- * of the can), or outside it (none). Faces beyond the grid's last cell,
+/* A face, in fluid_t.face: between two cells of the hat, a wall (one cell
+ * of the hat), or outside it (none). Faces beyond the grid's last cell,
  * past the end of an axis shorter than FLUID_FACES, stay FACE_OUTSIDE. */
 #define FACE_OUTSIDE 0
 #define FACE_WALL    1
@@ -169,10 +169,10 @@ static void collide_axis(float *pos, float *vel, float lo, float hi, bool open_l
     }
 }
 
-/* Keep a particle off the can's walls, which are the closed faces of its
+/* Keep a particle off the hat's walls, which are the closed faces of its
  * cells; a wall stops motion into it. A particle that cut a corner into a
- * cell outside the can first goes back into the nearest cell of the can
- * beside, above or below it, a step towards the can's middle along one
+ * cell outside the hat first goes back into the nearest cell of the hat
+ * beside, above or below it, a step towards the hat's middle along one
  * axis or two. */
 static void collide_walls(const fluid_t *f, particle_t *p)
 {
@@ -182,7 +182,7 @@ static void collide_walls(const fluid_t *f, particle_t *p)
                                            {1, 1, 0}, {1, 0, 1}, {0, 1, 1}};
         const int di = p->pos.x < AXIS_X ? 1 : -1;
         const int dj = p->pos.y < AXIS_Y ? 1 : -1;
-        const int dk = p->pos.z < CAN_HEIGHT / 2.0f ? 1 : -1;
+        const int dk = p->pos.z < HAT_HEIGHT / 2.0f ? 1 : -1;
         for (int n = 0; n < 6; n++) {
             const int ti = i + STEPS[n][0] * di, tj = j + STEPS[n][1] * dj;
             const int tk = k + STEPS[n][2] * dk;
@@ -298,7 +298,7 @@ static void push_apart(fluid_t *f)
 }
 
 /* Spread particle velocities onto the faces. Walls carry no flow, and
- * faces with no cell of the can on either side take no part, just as if
+ * faces with no cell of the hat on either side take no part, just as if
  * they lay beyond the grid. */
 static void particles_to_grid(fluid_t *f)
 {
@@ -430,16 +430,16 @@ static void update_density(fluid_t *f)
     }
 }
 
-/* Whether cell (i, j, k) lies in the can: its centre inside the can's
- * radius at its height, and below CAN_HEIGHT. */
+/* Whether cell (i, j, k) lies in the hat: its centre inside the hat's
+ * radius at its height, and below HAT_HEIGHT. */
 static bool inside(int i, int j, int k)
 {
     if (i < 0 || i >= NX || j < 0 || j >= NY || k < 0 || k >= NZ) {
         return false;
     }
     const float dx = (float)i + 0.5f - AXIS_X, dy = (float)j + 0.5f - AXIS_Y;
-    const float z = (float)k + 0.5f, r = can_radius_at(z);
-    return dx * dx + dy * dy < r * r && z < CAN_HEIGHT;
+    const float z = (float)k + 0.5f, r = hat_radius_at(z);
+    return dx * dx + dy * dy < r * r && z < HAT_HEIGHT;
 }
 
 void fluid_init(fluid_t *f)
@@ -481,7 +481,7 @@ void fluid_populate(fluid_t *f)
     /* Two particles per cell, on opposite corners of a smaller cube in
      * it: evenly spread and clear of the walls. */
     static const float OFFSETS[2] = {0.3f, 0.7f};
-    const int layers = (int)lrintf(CAN_HEIGHT / 2.0f);
+    const int layers = (int)lrintf(HAT_HEIGHT / 2.0f);
     f->n = 0;
     for (int z = 0; z < layers; z++) {
         for (int y = 0; y < NY; y++) {
@@ -492,11 +492,11 @@ void fluid_populate(fluid_t *f)
                 for (int k = 0; k < FLUID_PARTICLES_PER_CELL && f->n < FLUID_PARTICLES; k++) {
                     const float o = OFFSETS[k % 2];
                     const vec3_t pos = v3((float)x + o, (float)y + o, (float)z + o);
-                    /* Shades run across the can and up it: from -1 on the
+                    /* Shades run across the hat and up it: from -1 on the
                      * -x side at the floor to +1 on the +x side at the
                      * half-full level. */
-                    const float across = (pos.x - AXIS_X) / CAN_RADIUS_MAX;
-                    const float up = pos.z / (0.5f * CAN_HEIGHT);
+                    const float across = (pos.x - AXIS_X) / HAT_RADIUS_MAX;
+                    const float up = pos.z / (0.5f * HAT_HEIGHT);
                     const float t = clampf(0.5f * (across + up), -1.0f, 1.0f);
                     f->p[f->n++] = (particle_t){
                         .pos = pos,
@@ -518,8 +518,8 @@ void fluid_set_rotation(fluid_t *f, vec3_t rotation)
 void fluid_step(fluid_t *f, vec3_t accel)
 {
     const vec3_t gravity = v3_scale(accel, FLUID_GRAVITY);
-    const vec3_t center = v3(AXIS_X, AXIS_Y, CAN_HEIGHT / 2.0f);
-    /* In the turning can the fluid feels the Euler force (the spin
+    const vec3_t center = v3(AXIS_X, AXIS_Y, HAT_HEIGHT / 2.0f);
+    /* In the turning hat the fluid feels the Euler force (the spin
      * speeding up), Coriolis and centrifugal forces. */
     const vec3_t spin = v3_scale(f->rotation, ROTATION_GAIN);
     const vec3_t spin_up = v3_sub(spin, v3_scale(f->last_rotation, ROTATION_GAIN));

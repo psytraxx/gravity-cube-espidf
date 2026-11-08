@@ -4,7 +4,7 @@
  * a tap is a jump in acceleration
  * between consecutive samples (the slope) above a threshold. The samples
  * that follow within the shock time belong to the same tap. A tap only
- * counts after a quiet time with no jump at all, so shaking the can does
+ * counts after a quiet time with no jump at all, so shaking the hat does
  * not read as tapping; a second tap within the window makes a double tap.
  *
  * Feed it every sample, at the IMU's sample rate (the FIFO keeps them). */

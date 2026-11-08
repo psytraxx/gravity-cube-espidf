@@ -1,4 +1,4 @@
-#include "can.h"
+#include "hat.h"
 
 #include <math.h>
 #include <string.h>
@@ -33,9 +33,9 @@ void frame_set_led(frame_t *f, int led, color_t color)
 
 /* LEDs per turn where the strip starts, and the change in it per turn
  * on from there. */
-#define START_LEDS  (CAN_START_AT_TOP ? CAN_LEDS_PER_TURN_TOP : CAN_LEDS_PER_TURN_BOTTOM)
-#define END_LEDS    (CAN_START_AT_TOP ? CAN_LEDS_PER_TURN_BOTTOM : CAN_LEDS_PER_TURN_TOP)
-#define LEDS_CHANGE ((END_LEDS - START_LEDS) / CAN_TURNS)
+#define START_LEDS  (HAT_START_AT_TOP ? HAT_LEDS_PER_TURN_TOP : HAT_LEDS_PER_TURN_BOTTOM)
+#define END_LEDS    (HAT_START_AT_TOP ? HAT_LEDS_PER_TURN_BOTTOM : HAT_LEDS_PER_TURN_TOP)
+#define LEDS_CHANGE ((END_LEDS - START_LEDS) / HAT_TURNS)
 
 /* Turns from LED 0 to LED `led`. The LEDs up to t turns on number
  * START_LEDS * t + LEDS_CHANGE * t^2 / 2; this solves that for t (in the
@@ -46,45 +46,45 @@ static float turns(int led)
     return 2.0f * i / (START_LEDS + sqrtf(START_LEDS * START_LEDS + 2.0f * LEDS_CHANGE * i));
 }
 
-float can_led_at_turns(float t)
+float hat_led_at_turns(float t)
 {
     return START_LEDS * t + 0.5f * LEDS_CHANGE * t * t;
 }
 
-float can_led_angle(int led)
+float hat_led_angle(int led)
 {
     const float t = turns(led);
     const float frac = t - floorf(t);
-    const float a = TWO_PI * (CAN_CLOCKWISE ? 1.0f - frac : frac);
+    const float a = TWO_PI * (HAT_CLOCKWISE ? 1.0f - frac : frac);
     return a >= TWO_PI ? 0.0f : a;
 }
 
-float can_led_height(int led)
+float hat_led_height(int led)
 {
-    const float up = (0.5f + turns(led)) * CAN_ROW_PITCH_CELLS;
-    return CAN_START_AT_TOP ? CAN_HEIGHT - up : up;
+    const float up = (0.5f + turns(led)) * HAT_ROW_PITCH_CELLS;
+    return HAT_START_AT_TOP ? HAT_HEIGHT - up : up;
 }
 
-vec3_t can_led_pos(int led)
+vec3_t hat_led_pos(int led)
 {
-    const float a = can_led_angle(led);
-    const float z = can_led_height(led);
-    const float r = can_radius_at(z);
+    const float a = hat_led_angle(led);
+    const float z = hat_led_height(led);
+    const float r = hat_radius_at(z);
     return v3(FLUID_NX / 2.0f + r * cosf(a), FLUID_NY / 2.0f + r * sinf(a), z);
 }
 
-void can_view_init(can_view_t *v)
+void hat_view_init(hat_view_t *v)
 {
     memset(v, 0, sizeof *v);
 }
 
-void can_view_frame(can_view_t *v, const fluid_t *f, uint32_t hue, float brightness, frame_t *frame)
+void hat_view_frame(hat_view_t *v, const fluid_t *f, uint32_t hue, float brightness, frame_t *frame)
 {
     frame_clear(frame);
     for (int i = 0; i < LED_COUNT; i++) {
-        const float a = can_led_angle(i);
-        const float z = can_led_height(i);
-        const float r = can_radius_at(z) - SAMPLE_INSET;
+        const float a = hat_led_angle(i);
+        const float z = hat_led_height(i);
+        const float r = hat_radius_at(z) - SAMPLE_INSET;
         const vec3_t at = v3(FLUID_NX / 2.0f + r * cosf(a), FLUID_NY / 2.0f + r * sinf(a), z);
         float tint;
         const float density = fluid_sample(f, at, &tint);
@@ -110,13 +110,13 @@ static float angle_between(float a, float b)
     return fmodf(b - a + 1.5f * TWO_PI, TWO_PI) - 0.5f * TWO_PI;
 }
 
-void can_calibration_frame(frame_t *frame, vec3_t accel)
+void hat_calibration_frame(frame_t *frame, vec3_t accel)
 {
     frame_clear(frame);
     const bool tilted = accel.x * accel.x + accel.y * accel.y > CAL_MIN_TILT * CAL_MIN_TILT;
     const float down = atan2f(accel.y, accel.x);
     for (int i = 0; i < LED_COUNT; i++) {
-        if (tilted && fabsf(angle_between(down, can_led_angle(i))) < CAL_BAND) {
+        if (tilted && fabsf(angle_between(down, hat_led_angle(i))) < CAL_BAND) {
             frame_set_led(frame, i, CAL_DOWN);
         }
     }
@@ -124,9 +124,9 @@ void can_calibration_frame(frame_t *frame, vec3_t accel)
      * round when the strip winds clockwise; on every turn the LED nearest
      * it lights. */
     for (int q = 0; q < 4; q++) {
-        const float share = CAN_CLOCKWISE ? (float)((4 - q) % 4) / 4.0f : (float)q / 4.0f;
+        const float share = HAT_CLOCKWISE ? (float)((4 - q) % 4) / 4.0f : (float)q / 4.0f;
         for (int k = 0;; k++) {
-            const int led = (int)floorf(can_led_at_turns((float)k + share) + 0.5f);
+            const int led = (int)floorf(hat_led_at_turns((float)k + share) + 0.5f);
             if (led >= LED_COUNT) {
                 break;
             }
@@ -135,7 +135,7 @@ void can_calibration_frame(frame_t *frame, vec3_t accel)
     }
 }
 
-void can_ruler_frame(frame_t *frame)
+void hat_ruler_frame(frame_t *frame)
 {
     static const color_t ZERO = {60, 0, 0}, HUNDRED = {0, 60, 0}, FIFTY = {0, 0, 60},
                          TEN = {20, 20, 20};
