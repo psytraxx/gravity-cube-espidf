@@ -39,22 +39,12 @@ config CUBE_FRAME_MS
         17 ms on the ESP32-S3, so 18 ms (55 steps a second) is the
         shortest period it keeps up with; the LED chain needs ~11.5 ms.
 
-config CUBE_PANEL_TEST
-    bool "Panel test at power on"
-    default y
-    help
-        Before the fluid starts, fill each panel green LED by LED, from
-        the bottom left row by row to the top right, in chain order (Left,
-        Back, Right, Front, Bottom, Top): about 0.8 seconds a panel. A dead
-        LED or panel, or a broken link in the chain, shows up straight
-        away: every panel after a break stays dark.
-
 config CUBE_ASSEMBLY_PATTERN
     bool "Assembly pattern instead of the fluid"
     default n
     help
-        For putting the panels into the case: after the panel test, show
-        a still pattern instead of the fluid. Each panel shows its own
+        For putting the panels into the case: show a still pattern
+        instead of the fluid. Each panel shows its own
         colour in its centre (Left red, Back green, Right blue, Front
         yellow, Bottom magenta, Top white) and, along each edge, the
         colour of the panel across that edge; corners stay dark. Every
