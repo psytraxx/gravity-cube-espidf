@@ -16,7 +16,7 @@ for ESP-IDF 6.1. The physics is a port of the fluid solver in
 | ESP32-WROOM-32 board | 4 MB flash |
 | MPU-6500 breakout | 3–5 V supply (on-board LDO), wired for SPI |
 | WS2812B strip, 500 LEDs | 100 per metre, wound in a spiral of about 12.7 turns (13 rows) round the can, each turn the same way round: about 40.5 LEDs a turn at the bottom, 38 at the top |
-| I2S microphone (e.g. INMP441) | On GPIO 14, 15 and 32; wired, but the firmware does not read it |
+| I2S microphone (e.g. INMP441) | On GPIO 32, 33 and 25; wired, but the firmware does not read it |
 | 330 Ω resistor | In series with the data line, at the strip's input |
 | 1000 µF capacitor or more | Across 5 V and GND at the strip's input (10 V or more) |
 | 1N5819 Schottky diode | From the 5 V supply to the board's 5V pin, so USB cannot feed the strip or the supply |
@@ -44,12 +44,10 @@ where the supply meets the strip, + to 5 V. All grounds are common.
 
 | ESP32 | Goes to |
 |---|---|
-| GPIO 12 | 330 Ω → DIN of the strip |
+| GPIO 13 | 330 Ω → DIN of the strip |
 
-GPIO 12 is a strapping pin: high at reset, it selects 1.8 V flash and
-the board does not boot. The strip's input does not pull it up, so it
-stays low; if the board fails to boot with the strip connected, move the
-data line to a free pin such as GPIO 27 and set it in menuconfig.
+GPIO 13 sits next to GND and near 5V on the board's header, and has no
+role at boot.
 
 The ESP32 drives the data line at 3.3 V; WS2812B LEDs want about 3.5 V
 at a 5 V supply. Most take 3.3 V; if the first LEDs flicker or show
@@ -79,16 +77,16 @@ idles high, so it is.
 |---|---|
 | VDD | 3V3 |
 | GND | GND |
-| SCK | GPIO 14 (I2S bit clock) |
-| WS | GPIO 15 (I2S word select) |
 | SD | GPIO 32 (I2S data) |
+| SCK | GPIO 33 (I2S bit clock) |
+| WS | GPIO 25 (I2S word select) |
 | L/R | GND (left channel) |
 
-The firmware does not read the microphone. These are the pins WLED's
-sound-reactive build uses on this can (`"digitalmic": {"type": 1,
-"pin": [32, 15, 14, -1]}`: SD, WS, SCK, no MCLK). GPIO 15 is a strapping
-pin that only silences the boot messages when low, so the microphone's
-WS line on it does no harm.
+The firmware does not read the microphone. The three pins sit next to
+each other on the header, and none has a role at boot. In WLED's
+sound-reactive build the same wiring is `"digitalmic": {"type": 1,
+"pin": [32, 25, 33, -1]}` (SD, WS, SCK, no MCLK), with the LEDs on
+GPIO 13.
 
 ### The strip and the IMU
 
@@ -224,7 +222,7 @@ Without a token, anyone on the network can reflash the can.
 
 | Setting | Default | |
 |---|---|---|
-| LED data GPIO | 12 | |
+| LED data GPIO | 13 | |
 | Physics step period | 18 ms | The physics constants are per step |
 | LED test at power on | on | Fills the strip, then shows LED 0's line up the can (~4 s) |
 | Calibration picture | off | Instead of the fluid: lines for the geometry, a band for the IMU |

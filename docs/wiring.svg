@@ -78,14 +78,14 @@
   <text x="366" y="186">5V</text>
   <text x="366" y="524">GND</text>
   <g text-anchor="end">
-    <text x="492" y="194">GPIO 12</text>
+    <text x="492" y="194">GPIO 13</text>
     <text x="492" y="294">GPIO 5</text>
     <text x="492" y="319">GPIO 23</text>
     <text x="492" y="344">GPIO 18</text>
     <text x="492" y="369">GPIO 19</text>
     <text x="492" y="414">3V3</text>
-    <text x="492" y="449">GPIO 14</text>
-    <text x="492" y="474">GPIO 15</text>
+    <text x="492" y="449">GPIO 33</text>
+    <text x="492" y="474">GPIO 25</text>
     <text x="492" y="499">GPIO 32</text>
   </g>
 

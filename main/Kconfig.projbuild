@@ -2,14 +2,11 @@ menu "Gravity can"
 
 config CAN_LED_GPIO
     int "LED data GPIO"
-    default 12
+    default 13
     help
         Data line of the WS2812B strip, through a 330 ohm series
-        resistor. GPIO 12 is a strapping pin: high at reset, it selects
-        1.8 V flash and the board does not boot. The strip's input does
-        not pull it up, so it stays low; if the board fails to boot with
-        the strip connected, move the data line to a free pin such as
-        GPIO 27.
+        resistor. GPIO 13 is not a strapping pin, and sits next to GND
+        and near 5V on the board's header.
 
 config CAN_FRAME_MS
     int "Physics step period (ms)"
