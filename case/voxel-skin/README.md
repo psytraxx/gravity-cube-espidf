@@ -1,6 +1,6 @@
 # Voxel Skin enclosure
 
-![Voxel Skin 65×65 in the 3D viewer](preview.png)
+![Voxel Skin 65×65 in the 3D viewer, lid lifted off the box](preview.png)
 
 A translucent resin cube whose six faces each hold one WS2812 8×8 panel. Five faces print as one open **box**; the front face is the **lid**. It comes in two sizes from the same generator:
 
@@ -8,7 +8,7 @@ A translucent resin cube whose six faces each hold one WS2812 8×8 panel. Five f
 |---|---|---|
 | Panel | rigid 65 × 66 mm, 8.125 mm pitch | flexible 80 × 80 mm, 10 mm pitch, on a 1 mm backing sheet |
 | Outer cube | **86.0 mm** | **100.0 mm** |
-| Resin | 124 cm³ (box 102.7 + lid 21.5) | 155 cm³ (box 128.4 + lid 26.7) |
+| Resin | 127 cm³ (box 105.3 + lid 22.0) | 159 cm³ (box 131.4 + lid 27.4) |
 | Lit width per face | 79.2 mm | 93.2 mm |
 | Pocket clearance per side | 0.25 mm | 0.4 mm |
 
@@ -48,7 +48,7 @@ The USB-C socket and the SS12F15 switch sit on a flat pad along the middle of th
 - every outer wall (surfaces on the outside of the cube or on a mitre) and every edge wall is at least **1.3 mm** thick, measured to the nearly parallel face behind it;
 - every feature is at least **0.8 mm** thick, counting wedges up to 45°.
 
-The thinnest outer wall is 1.37 mm (beside the port pockets). The thinnest features are the 0.9 mm walls around the dowel holes.
+The thinnest outer or edge wall is 1.30 mm on the 65 mm cube and 1.37 mm on the 80 mm cube. The thinnest features are the 0.9 mm walls around the dowel holes and the 0.85 mm pocket lip of the fit-test slice.
 
 | Dimension | 65x65 | 80x80 |
 |---|---|---|
