@@ -271,11 +271,10 @@ surface does not flicker. A step takes ~17 ms on the ESP32-S3.
 ## Enclosure
 
 [`case/voxel-skin/`](case/voxel-skin/README.md) holds the Voxel Skin
-enclosure: a translucent resin cube printed as an open box of five faces and
-a lid for the front. On every face the skin, the edge bevels and the edge
-walls are one 1.4 mm wall that carries the load, with 1.3 mm light baffles
-inside. The USB-C socket and slide switch sit on the bottom front edge. One
-generator builds two sizes:
+enclosure: six mitred, translucent resin face shells. The skin, the edge
+bevels and the mitre walls of each shell are one 1.4 mm wall that carries the
+load, with 1.3 mm light baffles inside. The USB-C socket and slide switch sit
+on the bottom front edge. One generator builds two sizes:
 
 - `65x65/`: an 86 mm cube for rigid 65 × 66 mm panels;
 - `80x80/`: a 100 mm cube for flexible 80 × 80 mm panels.

@@ -34,7 +34,7 @@ def check(name, vol, want_zero=True):
         failures.append(name)
 
 
-def panel(dx=0.0, dy=0.0, oversize=0.0, gdy=0.0, pieces=None):
+def panel(dx=0.0, dy=0.0, oversize=0.0, gdy=0.0):
     """Panel stack + LEDs + capacitors in shell coordinates, shifted by dx, dy in its pocket;
     gdy moves the LED grid on the board (65 mm boards: up to 0.5 mm along the 66 mm side)."""
     hx, hy = g.HX + oversize / 2, g.HY + oversize / 2
@@ -46,8 +46,6 @@ def panel(dx=0.0, dy=0.0, oversize=0.0, gdy=0.0, pieces=None):
             cy = (j + 0.5) * g.PITCH - g.H + dy + gdy
             leds.append(g.box(cx - 2.5, cx + 2.5, cy - 2.5, cy + 2.5, g.Z_PCB, g.Z_PCB + g.LED_H))
             caps.append(g.box(cx - 1.0, cx + 1.0, cy + 2.75, cy + 3.35, g.Z_PCB, g.Z_PCB + 1.25))
-    if pieces is not None:
-        pieces[:] = [pcb] + leds + caps
     return pcb, g.sum_all(leds), g.sum_all(caps)
 
 
@@ -58,95 +56,70 @@ def grown(m, d=0.4):
     return out
 
 
+shell = g.face_shell()
 cut = g.port_cut()
-box, lid = g.box_and_lid(cut)
-parts = box + lid
+shells = {n: (g.face_shell(g.PORT_FACES[n]).rotate(r) - cut) if n in g.PORT_FACES else shell.rotate(r)
+          for n, r in g.FACES.items()}
+
+print(f"== one shell and its own panel (centred, and pushed {g.FIT} mm into each corner)")
 s = g.FIT
 goff = (g.PANEL_Y - g.GRID_SPAN) / 2
-
-
-def placed_panel(name, dx=0.0, dy=0.0, dz=0.0, gdy=0.0):
-    """One face's panel stack, LEDs and capacitors in cube coordinates, dz along the face normal."""
-    return g.sum_all(list(panel(dx, dy, gdy=gdy))).translate([0, 0, dz]).rotate(g.FACES[name])
-
-
-def sweep(name, dz, move):
-    """Space a panel passes through when it moves by `move` (cube coordinates) from dz in from
-    its face: one hull per board, LED and capacitor, as each of them is a box."""
-    pieces = []
-    panel(pieces=pieces)
-    out = []
-    for p in pieces:
-        p = p.translate([0, 0, dz]).rotate(g.FACES[name])
-        out.append(g.Manifold.batch_hull([p, p.translate(list(move))]))
-    return g.sum_all(out)
-
-
-print(f"== every panel in its pocket (centred, and pushed {g.FIT} mm into each corner)")
-for name in g.FACES:
-    worst = 0.0
-    for gdy in sorted({0.0, goff, -goff}):
-        # an off-centre LED grid is checked with the panel centred, as the 0.5 mm is a worst case already
-        for dx, dy in [(0, 0), (s, s), (-s, s), (s, -s), (-s, -s)] if not gdy else [(0, 0)]:
-            worst = max(worst, (parts ^ placed_panel(name, dx, dy, gdy=gdy)).volume())
-    check(f"{name} panel, LEDs and capacitors vs box and lid", worst)
+port_shell = g.face_shell(-1) - cut
+for gdy in sorted({0.0, goff, -goff}):
+    # an off-centre LED grid is checked with the panel centred, as the 0.5 mm is a worst case already
+    for dx, dy in [(0, 0), (s, s), (-s, s), (s, -s), (-s, -s)] if not gdy else [(0, 0)]:
+        pcb, leds, caps = panel(dx, dy, gdy=gdy)
+        for nm, sh in (("plain", shell), ("port", port_shell)):
+            check(f"{nm} shell vs panel/LEDs/capacitors at ({dx:+.2f}, {dy:+.2f}), LED grid {gdy:+.1f}",
+                  (sh ^ pcb).volume() + (sh ^ leds).volume() + (sh ^ caps).volume())
 over = round(2 * g.FIT - 0.1, 2)
 pcb, _, _ = panel(oversize=over)
-check(f"panel {g.PANEL_X + over} x {g.PANEL_Y + over} mm vs box and lid",
-      max((parts ^ pcb.rotate(r)).volume() for r in g.FACES.values()))
-for name, r in g.FACES.items():
-    contact = g.box(-g.HX, g.HX, -g.HY, g.HY, g.Z_PCB, g.Z_PCB + 0.05).rotate(r)
-    check(f"{name} clamp ring rests on the panel margin (must be > 0)", (parts ^ contact).volume(), want_zero=False)
+check(f"panel {g.PANEL_X + over} x {g.PANEL_Y + over} mm vs shell", (shell ^ pcb).volume())
+for dx in (0, g.FIT, -g.FIT):
+    contact = g.box(-g.HX + dx, g.HX + dx, -g.HY, g.HY, g.Z_PCB, g.Z_PCB + 0.05)
+    check(f"clamp ring rests on the panel margin, panel shifted {dx:+.1f} (must be > 0)",
+          (shell ^ contact).volume(), want_zero=False)
 
 print("== assembled cube")
-check("box vs lid", (box ^ lid).volume())
+# the four plain shells take their panel either way round (matters for 65 x 66 boards)
+spins = [(0, 90)] * 4 if g.PANEL_X != g.PANEL_Y else [(0,)] * 4
 for d in ((0, 0), (g.FIT, 0), (-g.FIT, 0), (0, g.FIT), (0, -g.FIT)):
-    bs = [placed_panel(n, *d) for n in g.FACES]
-    w = max((bs[a] ^ bs[b]).volume() for a in range(6) for b in range(a + 1, 6))
-    check(f"panels vs each other, all shifted {d}", w)
-allboards = g.sum_all([placed_panel(n) for n in g.FACES])
+    worst = 0.0
+    # every orientation with centred panels; the shifted panels in the base orientation
+    for combo in itertools.product(*spins) if d == (0, 0) else [(0, 0, 0, 0)]:
+        turns = dict(zip(("back", "top", "right", "left"), combo))
+        sh, bd = [], []
+        for n, r in g.FACES.items():
+            spin = turns.get(n, 0)
+            base = g.face_shell(g.PORT_FACES[n]) if n in g.PORT_FACES else shell
+            x = base.rotate([0, 0, spin]).rotate(r)
+            sh.append(x - cut if n in g.PORT_FACES else x)
+            bd.append(g.sum_all(list(panel(*d))).rotate([0, 0, spin]).rotate(r))
+        for a in range(6):
+            for b in range(a + 1, 6):
+                worst = max(worst, (sh[a] ^ sh[b]).volume(), (bd[a] ^ bd[b]).volume())
+        worst = max(worst, (g.sum_all(sh) ^ g.sum_all(bd)).volume())
+    check(f"shells and panels, all panels shifted {d}", worst)
+allshells = g.sum_all(list(shells.values()))
+allboards = g.sum_all([g.sum_all(list(panel())).rotate(r) for r in g.FACES.values()])
 usb, sw = g.usb_socket_model(), g.switch_model()
-check("USB-C socket vs box, lid and panels", (parts ^ usb).volume() + (allboards ^ usb).volume())
-check("switch vs box, lid and panels", (parts ^ sw).volume() + (allboards ^ sw).volume())
-
-print("== fitting the panels through the open front")
-# Each box panel goes in through the opening, held DEPTH in from its face so its LEDs pass
-# under the lip of the front edge, slides down into line with its pocket and is pressed out
-# into it. The back panel goes first and straight in. Checked against the box and every
-# other panel already in place.
-DEPTH = g.Z_PCB + g.LED_H - g.Z_LIP + 0.1
-lid_dir = np.array([0, 0, 1.0])
-for name in g.FACES:
-    if name == g.LID:
-        continue
-    dz = 0.0 if name == "back" else -DEPTH
-    path = sweep(name, dz, lid_dir * 2 * g.OUTER)
-    if dz:
-        normal = g._rot(g.FACES[name]) @ np.array([0, 0, 1.0])
-        path = path + sweep(name, dz, normal * DEPTH)
-    others = g.sum_all([placed_panel(n) for n in g.FACES if n not in (name, g.LID)])
-    check(f"{name} panel: path in vs box and the other panels", (path ^ box).volume() + (path ^ others).volume())
-print(f"     side panels go in {DEPTH:.2f} mm in from their faces, then out into their pockets")
+check("USB-C socket vs shells and panels", (allshells ^ usb).volume() + (allboards ^ usb).volume())
+check("switch vs shells and panels", (allshells ^ sw).volume() + (allboards ^ sw).volume())
 
 print("== light cells")
 for name, side in g.PORT_FACES.items():
-    cells = g.sum_all(g.light_cells(side, g.joints_of(name))).rotate(g.FACES[name])
+    cells = g.sum_all(g.light_cells(side)).rotate(g.FACES[name])
     check(f"{name} port pockets vs light cells, 0.4 mm margin", (grown(cut) ^ cells).volume())
-holes, dowels, inside = [], [], 0.0
-for name, r in g.FACES.items():
-    j = g.joints_of(name)
-    if not j:
-        continue
-    holes.append(g.pin_holes(j).rotate(r))
-    cells = g.sum_all(g.light_cells(g.PORT_FACES.get(name, 0), j)) - g.pin_bosses(j)
-    inside += (grown(g.pin_holes(j)) ^ cells).volume()
-    if name == g.LID:
-        for along, k in g._pin_axes(j):
-            d = g.Manifold.cylinder(5.5, 1.0, 1.0, g.SEG, True)
-            dowels.append(d.rotate([0, -45, 0]).translate([g.PIN_AT, along, g.PIN_AT]).rotate([0, 0, 90 * k]))
-check("dowel holes inside their bosses (hole vs cells, 0.4 mm margin)", inside)
-check(f"{len(dowels)} dowels of 5.5 mm vs box and lid", (g.sum_all(dowels) ^ parts).volume())
-check("dowel holes vs port pockets", (g.sum_all(holes) ^ cut).volume())
+dowels = []
+for along, k in g._pin_axes():
+    d = g.Manifold.cylinder(5.5, 1.0, 1.0, g.SEG, True)
+    dowels.append(d.rotate([0, -45, 0]).translate([g.PIN_AT, along, g.PIN_AT]).rotate([0, 0, 90 * k]))
+dowels = g.sum_all(dowels)
+check("dowel holes inside their bosses (hole vs cells, 0.4 mm margin)",
+      (grown(g.pin_holes()) ^ (g.sum_all(g.light_cells(0)) - g.pin_bosses())).volume())
+check("5.5 mm dowels vs own shell", (dowels ^ shell).volume())
+check("dowel holes vs port pockets", (g.pin_holes().rotate(g.FACES["front"]) ^ cut).volume()
+      + (g.pin_holes().rotate(g.FACES["bottom"]) ^ cut).volume())
 
 print(f"== printability: outer walls >= {g.MIN_WALL} mm, every part >= {g.MIN_PART} mm")
 
@@ -172,27 +145,19 @@ def confirm(tm, o, dirs, d, dot, limit=1.4, step=0.05):
     return d
 
 
-def outer_surface(pts):
-    """Points on the outside of the cube (faces, bevels) or on a mitre between box and lid."""
-    a = np.abs(pts)
-    on_face = np.isclose(a.max(1), g.OUTER, atol=1e-3)
-    on_bevel = np.zeros(len(pts), bool)
-    for i, j in ((0, 1), (0, 2), (1, 2)):
-        on_bevel |= np.isclose((a[:, i] + a[:, j]) / g.SQ2, g.FACET_D, atol=1e-3)
-    on_mitre = (pts[:, 2] > 0) & np.isclose(np.maximum(a[:, 0], a[:, 1]), pts[:, 2], atol=1e-3)
+def outer_surface(pts, nn):
+    """Points on the outside of the cube (faces, bevels) or on a mitre plane."""
+    x, y, z = np.abs(pts).T
+    on_face = np.isclose(z, g.OUTER, atol=1e-3)
+    on_bevel = np.isclose((np.maximum(x, y) + z) / g.SQ2, g.FACET_D, atol=1e-3)
+    on_mitre = np.isclose(np.maximum(x, y), z, atol=1e-3)
     return on_face | on_bevel | on_mitre
 
 
-def edge_wall(nn):
-    """Faces at 45 degrees between two axes: the walls of the edges, from inside and out."""
-    a = np.sort(np.abs(nn), axis=1)
-    return np.isclose(a[:, 1], 0.7071, atol=0.01) & np.isclose(a[:, 2], 0.7071, atol=0.01)
-
-
-for fname in ("box.stl", "lid.stl", "fit_test.stl"):
+for fname in ("shell.stl", "shell_port_front.stl", "shell_port_bottom.stl", "fit_test.stl"):
     tm = trimesh.load(os.path.join(g.OUT_DIR, fname))
     np.random.seed(0)
-    pts, fi = trimesh.sample.sample_surface_even(tm, 250000 if fname == "box.stl" else 120000)
+    pts, fi = trimesh.sample.sample_surface_even(tm, 120000)
     nn = tm.face_normals[fi]
     o = pts - nn * 1e-3
     loc, ri, ti = tm.ray.intersects_location(o, -nn, multiple_hits=False)
@@ -204,9 +169,9 @@ for fname in ("box.stl", "lid.stl", "fit_test.stl"):
     check(f"{fname} thinnest part {thinnest:.2f} mm (>= {g.MIN_PART})",
           g.MIN_PART - thinnest if thinnest < g.MIN_PART - 0.005 else 0.0)
     if fname != "fit_test.stl":
-        sel = (outer_surface(pts[ri]) | edge_wall(nn[ri])) & (dot < -0.9)
+        sel = outer_surface(pts[ri], nn[ri]) & (dot < -0.9)
         wall = float(d[sel].min())
-        check(f"{fname} thinnest outer and edge wall {wall:.2f} mm (>= {g.MIN_WALL})",
+        check(f"{fname} thinnest outer wall {wall:.2f} mm (>= {g.MIN_WALL})",
               g.MIN_WALL - wall if wall < g.MIN_WALL - 0.005 else 0.0)
 
 print("== wiring")
