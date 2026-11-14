@@ -4,4 +4,5 @@ build-*/
 sdkconfig
 sdkconfig.old
 managed_components/
-.vscode/__pycache__/
+.vscode/
+__pycache__/

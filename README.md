@@ -270,15 +270,14 @@ surface does not flicker. A step takes ~17 ms on the ESP32-S3.
 
 ## Enclosure
 
-[`case/`](case/) holds the Voxel Shell enclosure: six mitred, translucent
-face shells with a funnel light grid and a diffuser skin, and the USB-C
-socket and slide switch on the bottom front edge.
+[`case/voxel-skin/`](case/voxel-skin/README.md) holds the Voxel Skin
+enclosure: six mitred, translucent resin face shells. The skin, the edge
+bevels and the mitre walls of each shell are one 1.4 mm wall that carries the
+load, with 1.3 mm light baffles inside. The USB-C socket and slide switch sit
+on the bottom front edge. One generator builds two sizes:
 
-- [`case/voxel-shell-65x65/`](case/voxel-shell-65x65/README.md) is for the
-  rigid 65 x 66 mm panels; it also holds `generate.py`, which builds every
-  STL, and `check_fit.py`.
-- [`case/voxel-shell-80x80/`](case/voxel-shell-80x80/README.md) is for the
-  flexible 80 x 80 mm panels.
+- `65x65/`: an 86 mm cube for rigid 65 × 66 mm panels;
+- `80x80/`: a 100 mm cube for flexible 80 × 80 mm panels.
 
 `.github/workflows/pages.yml` publishes `case/` to GitHub Pages, with 3D
 viewers at <https://psytraxx.github.io/gravity-cube-espidf/>.
