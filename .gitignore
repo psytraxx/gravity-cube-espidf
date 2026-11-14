@@ -6,4 +6,3 @@ sdkconfig.old
 managed_components/
 .vscode/
 __pycache__/
-__pycache__/
