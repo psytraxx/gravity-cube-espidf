@@ -56,13 +56,13 @@ code { font-family: var(--font-mono); font-size: 13px; }
   <header>
     <h1>Voxel Skin <span id="h-profile"></span></h1>
     <nav class="profiles" aria-label="Panel size"><a href="?p=65x65" id="p-65x65">65 × 66 mm panels</a><a href="?p=80x80" id="p-80x80">80 × 80 mm panels</a></nav>
-    <p class="lede">This shows the actual STL files: six mitred face shells in translucent resin, each holding <span id="l-panel"></span>. Each shell is a folded plate: the skin, the edge bevels and the 45° mitre walls are one continuous <span id="l-skin"></span> mm wall that carries the load, and thin baffles inside it fan the light out so the pixels cover <span id="l-lit"></span> mm of each <span id="l-cube"></span> mm face. Drag to turn the cube and use the slider to pull it apart. The clear USB-C socket and green slide switch sit on the 45° bevel of the bottom front edge.</p>
+    <p class="lede">This shows the actual STL files: a translucent resin cube whose six faces each hold <span id="l-panel"></span>. Every face is a folded plate: the skin, the edge bevels and the edge walls are one continuous <span id="l-skin"></span> mm wall that carries the load, and thin baffles inside it fan the light out so the pixels cover <span id="l-lit"></span> mm of each <span id="l-cube"></span> mm face. Five faces print as one open box and the front face is the lid. Drag to turn the cube and use the slider to lift the lid off. The clear USB-C socket and green slide switch sit on the 45° bevel of the bottom front edge.</p>
   </header>
 
   <div class="stage" id="stage">
     <div id="loading">Loading STL files…</div>
     <div class="controls">
-      <div class="group"><label for="explode">Explode</label><input type="range" id="explode" min="0" max="1" step="0.01" value="0"></div>
+      <div class="group"><label for="explode">Open</label><input type="range" id="explode" min="0" max="1" step="0.01" value="0"></div>
       <div class="group">
         <button class="tog" id="t-plasma" aria-pressed="false">Plasma</button>
         <button class="tog" id="t-leds" aria-pressed="true">LEDs</button>
@@ -81,9 +81,8 @@ code { font-family: var(--font-mono); font-size: 13px; }
       <h2>Order these files</h2>
       <p style="margin:0;color:var(--muted)">Click a file name to download it. The source is <a href="https://github.com/psytraxx/gravity-cube-espidf/tree/main/case/voxel-skin">case/voxel-skin</a> on GitHub: <code>generate.py</code> builds every STL and <code>check_fit.py</code> checks fit and wall thickness.</p>
       <table>
-        <tr><td><a data-stl="shell.stl" download>shell.stl</a></td><td>× 4. The plain face (top, back, left, right).</td></tr>
-        <tr><td><a data-stl="shell_port_front.stl" download>shell_port_front.stl</a></td><td>× 1. Holds the USB-C cut-out and switch slot.</td></tr>
-        <tr><td><a data-stl="shell_port_bottom.stl" download>shell_port_bottom.stl</a></td><td>× 1. Has the matching relief for the port pockets.</td></tr>
+        <tr><td><a data-stl="box.stl" download>box.stl</a></td><td>× 1. Back, top, bottom, left and right faces in one part, open at the front.</td></tr>
+        <tr><td><a data-stl="lid.stl" download>lid.stl</a></td><td>× 1. The front face; holds the USB-C cut-out and switch slot with the bottom face.</td></tr>
         <tr><td><a data-stl="fit_test.stl" download>fit_test.stl</a></td><td>Optional, order first. A cheap slice of one shell (pocket lip, clamp ring, bottom of the baffles) to test-fit a real panel.</td></tr>
         <tr><td>Material</td><td>Translucent or clear resin for every part. Sand or bead-blast the outside for an even frosted glow.</td></tr>
       </table>
@@ -95,16 +94,15 @@ code { font-family: var(--font-mono); font-size: 13px; }
         <tr id="b-sheet-row"><td>6 ×</td><td>Backing sheet 80 × 80 × 1 mm, aluminium or FR4, glued behind each panel (panel + glue + sheet = 1.6 mm)</td></tr>
         <tr><td>1 ×</td><td>Snap-in USB-C socket with leads (flange 15.8 × 8.2, body 12.2 × 5.2)</td></tr>
         <tr><td>1 ×</td><td>SS12F15 slide switch (19.6 × 5.5 plate), glued in</td></tr>
-        <tr><td>24 ×</td><td>2 mm dowel, about 5.5 mm long (1.75 mm filament works)</td></tr>
+        <tr><td>8 ×</td><td>2 mm dowel, about 5.5 mm long (1.75 mm filament works), between box and lid</td></tr>
       </table>
     </section>
     <section class="card">
       <h2>Assembly</h2>
       <ol>
         <li id="a-panel"></li>
-        <li>Join the front and bottom port shells, push the USB-C socket into the bevel from outside and glue the switch behind its slot. Their leads pass between the two panel corners into the cube.</li>
-        <li>Wire the panels, ESP32 and battery inside the cube.</li>
-        <li>Put dowels in the holes at the root of each mitre wall and glue the mitre walls face to face. Leave the last face dry-fitted if you want to open the cube again.</li>
+        <li>Fit the switch behind its slot in the bottom face and wire the panels, ESP32 and battery inside the box.</li>
+        <li>Put the lid on with its panel and dowels, then push the USB-C socket into the bevel from outside; its pocket is split between box and lid. Glue the lid along its mitres, or leave it dry-fitted so the cube can be opened again.</li>
       </ol>
     </section>
   </div>
@@ -131,12 +129,12 @@ code { font-family: var(--font-mono); font-size: 13px; }
     return out;
   }
   const FACES = [ // name, rotation (deg, single axis), file
-    ['front', [0, 0, 0], 'shell_port_front.stl'],
-    ['back', [180, 0, 0], 'shell.stl'],
-    ['top', [-90, 0, 0], 'shell.stl'],
-    ['bottom', [90, 0, 0], 'shell_port_bottom.stl'],
-    ['right', [0, 90, 0], 'shell.stl'],
-    ['left', [0, -90, 0], 'shell.stl'],
+    ['front', [0, 0, 0], 'lid.stl'],
+    ['back', [180, 0, 0], null],
+    ['top', [-90, 0, 0], null],
+    ['bottom', [90, 0, 0], null],
+    ['right', [0, 90, 0], null],
+    ['left', [0, -90, 0], null],
   ];
   const stage = document.getElementById('stage');
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -197,22 +195,24 @@ code { font-family: var(--font-mono); font-size: 13px; }
     set('h-profile', flex ? '80×80' : '65×65'); document.title = 'Voxel Skin ' + (flex ? '80×80' : '65×65');
     document.getElementById('p-' + P).setAttribute('aria-current', 'page');
     set('l-panel', flex ? 'one flexible 80 × 80 mm WS2812 8×8 panel glued to a 1 mm backing sheet' : 'one 65 × 66 mm WS2812 8×8 panel');
-    set('l-skin', f1(SKIN)); set('l-lit', lit); set('l-cube', cubeMm); set('hud-cube', cubeMm + ' mm cube · 6 shells');
+    set('l-skin', f1(SKIN)); set('l-lit', lit); set('l-cube', cubeMm); set('hud-cube', cubeMm + ' mm cube · box + lid');
     set('b-panel', panel); document.getElementById('b-sheet-row').hidden = !flex;
-    set('a-panel', (flex ? 'Glue each flexible panel flat onto its backing sheet, then press it' : 'Press each panel') + ' into the pocket of its shell, LEDs facing the baffles. A few dots of glue on the clamp ring hold it.');
+    set('a-panel', (flex ? 'Glue each flexible panel flat onto its backing sheet. ' : '') + 'Fit the back panel first, straight through the open front. Slide each side panel in a few millimetres in from its face, LEDs outwards, and press it out into its pocket. A few dots of glue on the clamp rings hold the panels.');
     document.querySelectorAll('a[data-stl]').forEach(a => a.href = P + '/' + a.dataset.stl);
     const dims = [[cubeMm + ' mm', 'Outer cube edge'], [lit + ' mm', 'Lit width per face: the cells fan out from the LEDs to the mitre walls'],
       [f1(SKIN) + ' mm', 'Skin, bevel and mitre walls: one folded structural wall'], [f1(CFG.baffle) + ' mm', 'Light baffles, measured square to their faces'],
-      [f1(CFG.z_skin - CFG.z_pcb - 1.6) + ' mm', 'From the top of the LEDs to the skin'], ['≈ ' + f1(CFG.shell_cm3) + ' cm³', 'Resin per shell']];
+      [f1(CFG.z_skin - CFG.z_pcb - 1.6) + ' mm', 'From the top of the LEDs to the skin'], ['≈ ' + f1(CFG.box_cm3 + CFG.lid_cm3) + ' cm³', 'Resin: box ' + f1(CFG.box_cm3) + ' + lid ' + f1(CFG.lid_cm3) + ' cm³']];
     document.getElementById('dims').innerHTML = dims.map(([n, l]) => `<div class="dim"><span class="n">${n}</span><span class="l">${l}</span></div>`).join('');
   }
 
+  let boxMesh;
   async function build() {
     await setup();
+    // the other five faces are one printed part, exported in cube coordinates
+    boxMesh = new THREE.Mesh(await load('box.stl'), shellMat); boxMesh.renderOrder = 2; cube.add(boxMesh);
     for (const [name, rot, file] of FACES) {
       const g = new THREE.Group(); g.rotation.set(deg(rot[0]), deg(rot[1]), deg(rot[2]));
-      const geo = await load(file);
-      const shell = new THREE.Mesh(geo, shellMat); shell.renderOrder = 2; g.add(shell); g.userData.shell = shell;
+      if (file) { const shell = new THREE.Mesh(await load(file), shellMat); shell.renderOrder = 2; g.add(shell); g.userData.shell = shell; }
       const pcb = new THREE.Mesh(new THREE.BoxGeometry(PCB_X, PCB_Y, T), pcbMat); pcb.position.z = Z_BACK + T / 2; g.add(pcb);
       const lens = new THREE.InstancedMesh(lensGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }), N * N);
       const glow = new THREE.InstancedMesh(glowGeo, new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), N * N);
@@ -299,8 +299,9 @@ code { font-family: var(--font-mono); font-size: 13px; }
   const bind = (id, fn) => { const b = document.getElementById(id); b.addEventListener('click', () => { const v = fn(); b.setAttribute('aria-pressed', String(v)); }); return b; };
   bind('t-plasma', () => (plasma = !plasma));
   bind('t-leds', () => (ledsOn = !ledsOn));
-  bind('t-clear', () => { const clear = faceGroups[0] && faceGroups[0].userData.shell.material !== shellMat;
-    faceGroups.forEach(g => g.userData.shell.material = clear ? shellMat : shellSolid);
+  bind('t-clear', () => { const clear = boxMesh && boxMesh.material !== shellMat;
+    if (boxMesh) boxMesh.material = clear ? shellMat : shellSolid;
+    faceGroups.forEach(g => g.userData.shell && (g.userData.shell.material = clear ? shellMat : shellSolid));
     clearShell = clear; glowMeshes.forEach(m => m.visible = clear); skinMeshes.forEach(m => m.visible = !clear); return clear; });
   const spinBtn = bind('t-spin', () => (spin = !spin)); spinBtn.setAttribute('aria-pressed', String(spin));
   bind('t-port', () => { const on = view !== PORT; view = on ? PORT : HOME;
@@ -316,7 +317,8 @@ code { font-family: var(--font-mono); font-size: 13px; }
     const t = (now - t0) / 1000;
     if (spin && !dragging && now - last > 2500) cube.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.004));
     if (!view) { requestAnimationFrame(frame); return; }
-    faceGroups.forEach(g => g.position.copy(g.userData.normal).multiplyScalar(explode * 45 * SC));
+    // explode lifts the lid off the box; its panel and the USB-C socket and switch go with it
+    if (faceGroups[0]) faceGroups[0].position.set(0, 0, explode * 70 * SC);
     camera.position.lerp(view.pos.clone().multiplyScalar(view === HOME ? 1 + explode * 0.6 : 1), 0.12);
     camera.lookAt(view.at);
     if (pixels.length && lensMeshes.length === faceGroups.length) updateLeds(t);
