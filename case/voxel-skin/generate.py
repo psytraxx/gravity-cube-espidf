@@ -1,21 +1,27 @@
 #!/usr/bin/env python3
-"""Voxel Skin enclosure for the Gravity Cube (flexible 80 x 80 mm panels).
+"""Voxel Skin enclosure for the Gravity Cube.
 
 Six mitred face shells hold six flexible WS2812 8x8 panels. Each shell is one
 translucent resin part built as a folded plate of constant thickness: the
 outer skin, the edge bevels and the 45 degree mitre walls are one continuous
-1.4 mm wall, and that wall carries the load. Inside it, 0.8 mm baffles split
+1.4 mm wall, and that wall carries the load. Inside it, 1.3 mm baffles split
 the light into 8x8 funnel cells; the outermost cells run right out to the
 mitre walls, so there is no solid material along the edges. Glued together,
 the six shells form a closed box whose mitre walls lie face to face.
+
+Two 8x8 panel profiles (VOXEL_PROFILE environment variable), same firmware:
+  65x65  65 x 66 mm rigid panels, 8.125 mm pitch -> 65x65/  (default)
+  80x80  80 x 80 mm flexible panels on a 1 mm backing sheet, 10 mm pitch -> 80x80/
 
 Coordinates: mm, cube centred on the origin. A shell is modelled with its
 face normal along +Z; the front (skin) face is at z = OUTER.
 
     pip install manifold3d trimesh numpy rtree
-    python3 generate.py
+    python3 generate.py                        # 65 mm panels
+    VOXEL_PROFILE=80x80 python3 generate.py    # 80 mm panels
 """
 
+import json
 import math
 import os
 
@@ -23,29 +29,43 @@ import numpy as np
 import trimesh
 from manifold3d import Manifold
 
-OUT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROFILE = os.environ.get("VOXEL_PROFILE", "65x65")
+if PROFILE not in ("65x65", "80x80"):
+    raise SystemExit(f"unknown VOXEL_PROFILE {PROFILE!r}; use 65x65 or 80x80")
+OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), PROFILE)
 SQ2 = math.sqrt(2)
 
 # ---------------------------------------------------------------- panel
-# Flexible 80 x 80 mm boards, 10 mm pitch (outer LEDs 2.5 mm from the edge),
-# glued to an 80 x 80 x 1 mm backing sheet: a 1.6 mm stack.
 GRID_N = 8
-PANEL = 80.0
-PCB_T = 1.6
-PITCH = PANEL / GRID_N
+PCB_T = 1.6  # panel stack thickness
+if PROFILE == "65x65":
+    # Rigid boards, 65 x 66 mm: the 65 mm side runs along X, the 66 mm side
+    # along Y. The LED grid (8.125 mm pitch) is assumed centred; on the 66 mm
+    # side it may sit up to 0.5 mm off-centre.
+    PANEL_X, PANEL_Y = 65.0, 66.0
+    GRID_SPAN = 65.0
+    FIT = 0.25  # clearance around the panel in its pocket
+else:
+    # Flexible boards, 80 x 80 mm, 10 mm pitch, glued to an 80 x 80 x 1 mm
+    # backing sheet: panel + glue + sheet make the same 1.6 mm stack.
+    PANEL_X, PANEL_Y = 80.0, 80.0
+    GRID_SPAN = 80.0
+    FIT = 0.4  # an 80.7 mm backing sheet still fits
+PITCH = GRID_SPAN / GRID_N
 LED_H = 1.6  # WS2812 5050 package height
-HMAX = PANEL / 2
+H = GRID_SPAN / 2  # half the LED grid
+HX, HY = PANEL_X / 2, PANEL_Y / 2
+HMAX = max(HX, HY)  # depths use the long side, so a plain shell's panel can face either way
 
 # ---------------------------------------------------------------- walls
 SKIN = 1.4  # outer skin: structural wall and diffuser (> 1.2 mm)
 MITRE_T = 1.4  # mitre wall, measured square to the mitre (> 1.2 mm)
 BEVEL_T = 1.4  # wall under the edge bevels (> 1.2 mm)
-BAFFLE = 0.85  # light baffles, measured square to their faces (thinnest part >= 0.8 mm)
+BAFFLE = 1.3  # light baffles, measured square to their faces (> 1.2 mm)
 MIN_WALL = 1.3  # outer walls must be at least this (the rule is > 1.2)
 MIN_PART = 0.8  # every other feature must be at least this
 
 # ---------------------------------------------------------------- shell
-FIT = 0.4  # clearance around the panel in its pocket
 # Panel back to the neighbour's panel edge. The USB-C leads pass between the
 # panel corners along the port edge: with centred panels that slot is
 # sqrt(2) * PANEL_GAP = 1.7 mm wide.
@@ -60,32 +80,33 @@ Z_PCB = Z_BACK + PCB_T  # front of the panel (LED side)
 Z_GRID = Z_PCB + RELIEF  # bottom of the baffles
 Z_KINK = max(Z_PCB + LED_H + 0.2, Z_GRID + MIN_PART + 0.05)  # baffles stay square to the face up to here, clear of the LEDs
 Z_SKIN = Z_PCB + GRID_DEPTH  # back of the skin
-OUTER = Z_SKIN + SKIN  # front face: 50.0 -> 100 mm cube
+OUTER = Z_SKIN + SKIN  # front face: 43.0 / 50.0 -> 86 / 100 mm cube
 Z_LIP = max(Z_BACK, HMAX + FIT + LIP_MIN)  # back edge of the shell (bottom of the pocket lip)
 MITRE_OFF = MITRE_T * SQ2  # inner face of the mitre wall: |x| = z - MITRE_OFF
 BEVEL_S = 2.5  # bevel depth from the edge; meets each face BEVEL_S * sqrt(2) from the edge
 FACET_D = OUTER * SQ2 - BEVEL_S  # bevel facet distance from the centre
-W_SKIN = Z_SKIN - MITRE_OFF  # half the lit width at the skin (46.6)
+W_SKIN = Z_SKIN - MITRE_OFF  # half the lit width at the skin (39.6 / 46.6)
 BIG = OUTER + 20
 
 # Along the port edge the outer row of cells in PORT_COLS is kept narrow so
 # the solid material around the USB-C socket and the switch stays clear of it.
-PORT_COLS = (2, 3, 4, 5)
-PORT_BOTTOM = HMAX - 1.7  # outer side of those cells beside the LEDs (0.8 clear of the LED body)
-PORT_EDGE = OUTER - 10.0  # ... and at the skin (40)
+PORT_COLS = (1, 2, 3, 4, 5, 6) if PROFILE == "65x65" else (2, 3, 4, 5)  # the parts span ~37 mm
+PORT_BOTTOM = H - PITCH / 2 + 2.5 + 0.8  # outer side of those cells beside the LEDs (0.8 clear of the LED body)
+PORT_EDGE = OUTER - 10.0  # ... and at the skin (33 / 40)
 
 # ---------------------------------------------------------------- pins
 # 2 mm dowels across the mitre, two per edge. Each hole sits in a small boss at
 # the root of the mitre wall, centred on a baffle and clear of the panel and LEDs.
 PIN_D = 2.1
 PIN_DEPTH = 3.0  # per side
-PIN_ALONG = (30.0,)  # on the baffle between the outer two LED columns
+PIN_ALONG = (H - PITCH,)  # on the baffle between the outer two LED columns
 BOSS_WALL = 0.9
 BOSS_R = PIN_D / 2 + BOSS_WALL
-PIN_AT = 43.2  # pin axis meets the mitre at x = z = PIN_AT
+# pin axis meets the mitre at x = z = PIN_AT: as low as it can go with the boss clear of the panel corner
+PIN_AT = round((HMAX + FIT + Z_PCB) / 2 + (BOSS_R + 0.15) / SQ2, 1)
 
 # ---------------------------------------------------------------- USB-C + switch (cube coordinates; front = +Z, bottom = -Y)
-# Same parts as the Voxel Shell. They sit on the bevel of the bottom front edge
+# A snap-in USB-C socket and an SS12F15 slide switch sit on the bevel of the bottom front edge
 # and point diagonally into the wedge between the front and bottom panels.
 # Part geometry is written as if the facet were a front face at z = OUTER with
 # its centre line at y = 0; bevel_place() turns it onto the facet.
@@ -98,7 +119,7 @@ USB_WALL = 1.7  # wall the snap wings grip
 USB_NECK = 0.5  # pocket stays body-tight this far behind the wall, so it opens out 1.35 under the faces
 USB_POCKET_H = 8.6  # pocket height behind the neck
 USB_TAIL_H = 6.0  # pocket height over the last part of the body, clear of the light cells
-USB_X = -9.2
+USB_X = -10.5 if PROFILE == "65x65" else -9.2  # socket centre along the edge
 SW_PLATE = (19.6, 5.5)
 SW_BODY = (11.5, 5.5)
 SW_BODY_DEPTH = 5.0
@@ -109,7 +130,7 @@ SW_HOLE_PITCH = 15.0
 SW_LEVER = (3.3, 2.0)
 SW_SLOT = (7.0, 2.4)  # 3 mm travel + 3.3 lever; 2.4 tall leaves 1.3 to each face along the facet
 SW_WALL = 2.4  # keeps the plate pocket corners >= 1.3 under the faces
-SW_X = 10.0
+SW_X = 8.7 if PROFILE == "65x65" else 10.0  # the 65 mm grid packs both parts closer to the middle
 PART_FIT = 0.2
 WIRE_SLOT = (8.0, 4.0)  # wire channel from each pocket into the cube, along the diagonal
 WIRE_LEN = 6.0
@@ -194,9 +215,11 @@ def pin_bosses():
 # ---------------------------------------------------------------- light cells
 # Baffle centre lines: square to the face beside the LEDs (on the LED cell
 # boundaries), then fanning out to GRID_N equal cells across the lit width.
-LED_LINES = [-HMAX + k * PITCH for k in range(GRID_N + 1)]
+LED_LINES = [-H + k * PITCH for k in range(GRID_N + 1)]
 SKIN_LINES = [-W_SKIN + k * 2 * W_SKIN / GRID_N for k in range(GRID_N + 1)]
 RISE = Z_SKIN - Z_KINK
+TAPER = 1.0  # height over which a baffle widens from BAFFLE to its sloped width
+Z_TAPER = Z_KINK + TAPER
 
 
 def _half(k):
@@ -209,44 +232,52 @@ def _edge(z):
     return z - MITRE_OFF
 
 
-def _bounds(i, z, part, port):
-    """(lo, hi) of cell column i at height z. part: 'straight' or 'funnel'.
-    port = -1 / +1 narrows the outer cell on the -/+ side (PORT_EDGE)."""
+def _baffle(k, z):
+    """(left face, right face) of baffle k at height z, measured along the face.
+
+    Beside the LEDs the baffle is BAFFLE wide and square to the face. Above
+    Z_KINK it fans out towards its place on the skin; a sloped baffle has to
+    be wider along the face to stay BAFFLE thick, and it widens over TAPER so
+    no face overhangs in a thin ledge."""
+    b, h = LED_LINES[k], _half(k)
+    if z <= Z_KINK:
+        return b - BAFFLE / 2, b + BAFFLE / 2
+    c = b + (z - Z_KINK) / RISE * (SKIN_LINES[k] - b)
+    if z >= Z_TAPER:
+        return c - h, c + h
+    t = (z - Z_KINK) / TAPER
+    l0, r0 = _baffle(k, Z_KINK)
+    l1, r1 = _baffle(k, Z_TAPER)
+    return l0 + t * (l1 - l0), r0 + t * (r1 - r0)
+
+
+def _bounds(i, z, port):
+    """(lo, hi) of cell column i at height z. port = -1 / +1 narrows the outer
+    cell on the -/+ side to PORT_BOTTOM beside the LEDs and PORT_EDGE at the skin."""
     def outer(sign):
         if port == sign:
-            return PORT_EDGE if z >= Z_SKIN - 1e-9 else PORT_BOTTOM
+            t = max(0.0, (z - Z_KINK) / RISE)
+            return PORT_BOTTOM + t * (PORT_EDGE - PORT_BOTTOM)
         return _edge(z)
 
-    def line(k):
-        if part == "straight":  # as wide as the sloped part above, so the faces run on without a step
-            return LED_LINES[k], _half(k)
-        t = max(0.0, (z - Z_KINK) / RISE)
-        return LED_LINES[k] + t * (SKIN_LINES[k] - LED_LINES[k]), _half(k)
-
-    if i == 0:
-        lo = -outer(-1)
-    else:
-        c, h = line(i)
-        lo = c + h
-    if i == GRID_N - 1:
-        hi = outer(1)
-    else:
-        c, h = line(i + 1)
-        hi = c - h
+    lo = -outer(-1) if i == 0 else _baffle(i, z)[1]
+    hi = outer(1) if i == GRID_N - 1 else _baffle(i + 1, z)[0]
     return lo, hi
 
 
 def _cell(i, j, port_side):
+    """One cell: hulls between the levels where its sides change slope."""
     py = port_side if i in PORT_COLS else 0
+    levels = (Z_GRID - 0.01, Z_KINK, Z_TAPER, Z_SKIN)
     parts = []
-    for part, (z0, z1) in (("straight", (Z_GRID - 0.01, Z_KINK)), ("funnel", (Z_KINK - 0.01, Z_SKIN))):
+    for z0, z1 in zip(levels, levels[1:]):
         pts = []
         for z in (z0, z1):
-            x0, x1 = _bounds(i, z, part, 0)
-            y0, y1 = _bounds(j, z, part, py)
+            x0, x1 = _bounds(i, z, 0)
+            y0, y1 = _bounds(j, z, py)
             pts += [[x, y, z] for x in (x0, x1) for y in (y0, y1)]
         parts.append(Manifold.hull_points(np.array(pts)))
-    return parts[0] + parts[1]
+    return sum_all(parts)
 
 
 def light_cells(port_side=0):
@@ -259,10 +290,10 @@ def face_shell(port_side=0, pins=True):
     """One face shell. port_side = -1 / +1 narrows the outer cells along the
     -Y / +Y edge in PORT_COLS, leaving solid material for the USB-C socket and switch."""
     s = frustum() ^ chamfered_cube()
-    a = HMAX + FIT
-    s = s - box(-a, a, -a, a, Z_LIP - 1, Z_PCB)  # panel pocket
-    r = HMAX - CLAMP_RING
-    s = s - box(-r, r, -r, r, Z_PCB - 0.01, Z_GRID)  # relief over the LEDs and capacitors
+    ax, ay = HX + FIT, HY + FIT
+    s = s - box(-ax, ax, -ay, ay, Z_LIP - 1, Z_PCB)  # panel pocket
+    rx, ry = HX - CLAMP_RING, HY - CLAMP_RING
+    s = s - box(-rx, rx, -ry, ry, Z_PCB - 0.01, Z_GRID)  # relief over the LEDs and capacitors
     cells = sum_all(light_cells(port_side))
     if pins:
         cells = cells - pin_bosses()
@@ -323,9 +354,12 @@ def port_cut():
     cut = bevel_place(cut)
     # where the pockets and wire channels cross the pocket lips and clamp rings of both shells,
     # clear the whole corner up to the bottom of the baffles: otherwise thin fins stay standing
-    r0 = HMAX - CLAMP_RING - 0.01
+    r0 = HY - CLAMP_RING - 0.01
+    # (only under the narrow port cells: the full cells beside them keep their clamp ring)
+    lim = LED_LINES[GRID_N - PORT_COLS[0]] - BAFFLE / 2
     for x, w in ((USB_X, pw), (SW_X, max(ww, 2 * bw))):
-        cut = cut + box(x - w / 2, x + w / 2, -Z_GRID, -r0, r0, Z_GRID)
+        x0, x1 = max(x - w / 2, -lim), min(x + w / 2, lim)
+        cut = cut + box(x0, x1, -Z_GRID, -r0, r0, Z_GRID)
     return cut
 
 
@@ -417,6 +451,14 @@ def fit_test():
     return face_shell(pins=False) ^ box(-a, a, -a, a, Z_LIP - 1, Z_KINK)
 
 
+def profile_info():
+    """Numbers the viewer needs to draw the panels and the lit pixels."""
+    return {"profile": PROFILE, "n": GRID_N, "pcb_x": PANEL_X, "pcb_y": PANEL_Y, "pcb_t": PCB_T,
+            "pitch": PITCH, "z_back": Z_BACK, "z_pcb": Z_PCB, "z_skin": Z_SKIN, "outer": OUTER,
+            "skin_lines": SKIN_LINES, "baffle_half": [_half(k) for k in range(GRID_N + 1)],
+            "port_cols": list(PORT_COLS), "port_edge": PORT_EDGE, "skin": SKIN, "baffle": BAFFLE}
+
+
 FACES = {
     "front": [0, 0, 0],  # +Z
     "back": [180, 0, 0],  # -Z
@@ -441,6 +483,7 @@ def to_trimesh(m):
 
 def main():
     out = OUT_DIR
+    os.makedirs(out, exist_ok=True)
     shell = face_shell()
     cut = port_cut()
     parts = {"shell.stl": shell, "fit_test.stl": fit_test()}
@@ -469,6 +512,11 @@ def main():
     t = to_trimesh(cube)
     t.export(os.path.join(out, "assembly_preview.stl"))
     print(f"assembly_preview.stl     edge={t.extents[0]:.1f} mm  volume={t.volume / 1000:.1f} cm3")
+    info = profile_info()
+    info["shell_cm3"] = round(to_trimesh(shell).volume / 1000, 1)
+    with open(os.path.join(out, "profile.json"), "w") as f:
+        json.dump(info, f, indent=1)
+        f.write("\n")
 
 
 if __name__ == "__main__":
