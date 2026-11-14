@@ -35,7 +35,7 @@ def check(name, vol, want_zero=True):
 
 
 def panel(dx=0.0, dy=0.0, oversize=0.0, gdy=0.0, pieces=None):
-    """Panel stack + LEDs + capacitors in shell coordinates, shifted by dx, dy in its pocket;
+    """Panel stack + LEDs + capacitors in face coordinates, shifted by dx, dy in its pocket;
     gdy moves the LED grid on the board (65 mm boards: up to 0.5 mm along the 66 mm side)."""
     hx, hy = g.HX + oversize / 2, g.HY + oversize / 2
     pcb = g.box(-hx + dx, hx + dx, -hy + dy, hy + dy, g.Z_BACK, g.Z_PCB)

@@ -56,7 +56,7 @@ PITCH = GRID_SPAN / GRID_N
 LED_H = 1.6  # WS2812 5050 package height
 H = GRID_SPAN / 2  # half the LED grid
 HX, HY = PANEL_X / 2, PANEL_Y / 2
-HMAX = max(HX, HY)  # depths use the long side, so a plain shell's panel can face either way
+HMAX = max(HX, HY)  # depths use the long side, so every panel clears its neighbours either way round
 
 # ---------------------------------------------------------------- walls
 SKIN = 1.4  # outer skin: structural wall and diffuser (> 1.2 mm)
@@ -66,7 +66,7 @@ BAFFLE = 1.3  # light baffles, measured square to their faces (> 1.2 mm)
 MIN_WALL = 1.3  # outer walls must be at least this (the rule is > 1.2)
 MIN_PART = 0.8  # every other feature must be at least this
 
-# ---------------------------------------------------------------- shell
+# ---------------------------------------------------------------- faces
 # Panel back to the neighbour's panel edge. The USB-C leads pass between the
 # panel corners along the port edge: with centred panels that slot is
 # sqrt(2) * PANEL_GAP = 1.7 mm wide.
@@ -81,7 +81,7 @@ Z_PCB = Z_BACK + PCB_T  # front of the panel (LED side)
 Z_GRID = Z_PCB + RELIEF  # bottom of the baffles
 Z_SKIN = Z_PCB + GRID_DEPTH  # back of the skin
 OUTER = Z_SKIN + SKIN  # front face: 43.0 / 50.0 -> 86 / 100 mm cube
-Z_LIP = max(Z_BACK, HMAX + FIT + LIP_MIN)  # back edge of the shell (bottom of the pocket lip)
+Z_LIP = max(Z_BACK, HMAX + FIT + LIP_MIN)  # back edge of each face (bottom of the pocket lip)
 MITRE_OFF = MITRE_T * SQ2  # inner face of the mitre wall: |x| = z - MITRE_OFF
 EDGE_R = 4.0  # radius of the twelve rounded edges; the corners are spherical
 # The USB-C socket and switch need a flat: along the bottom front edge a 45 degree pad is cut
@@ -98,8 +98,11 @@ PORT_BOTTOM = H - PITCH / 2 + 2.5 + 0.8  # outer side of those cells beside the 
 PORT_EDGE = OUTER - 10.0  # ... and at the skin (33 / 40)
 
 # ---------------------------------------------------------------- pins
-# 2 mm dowels across the mitre, two per edge. Each hole sits in a small boss at
-# the root of the mitre wall, centred on a baffle and clear of the panel and LEDs.
+# 2 mm dowel holes across the mitres between box and lid, two per edge. Each hole
+# sits in a small boss at the root of the mitre wall, centred on a baffle and clear
+# of the panel and LEDs. The holes stay empty: the lid swings shut about the bottom
+# front edge (a straight push would hit the switch plate), and a dowel square to a
+# 45 degree mitre blocks that. The four mitres centre the lid.
 PIN_D = 2.1
 PIN_DEPTH = 3.0  # per side
 PIN_ALONG = (H - PITCH,)  # on the baffle between the outer two LED columns
@@ -205,7 +208,7 @@ def pin_holes(joints=ALL_EDGES):
 
 
 def pin_bosses(joints=ALL_EDGES):
-    """Solid around each dowel hole on this shell's side of the mitre."""
+    """Solid around each dowel hole on this face's side of the mitre."""
     out = []
     for along, k in _pin_axes(joints):
         b = Manifold.cylinder(PIN_DEPTH + BOSS_WALL + 0.5, BOSS_R, BOSS_R, SEG).translate([0, 0, -0.5])
@@ -319,7 +322,7 @@ def light_cells(port_side=0, joints=ALL_EDGES):
 def face_shell(port_side=0, pins=True, joints=ALL_EDGES):
     """One face in its own frame. port_side = -1 / +1 narrows the outer cells along the
     -Y / +Y edge in PORT_COLS, leaving solid material for the USB-C socket and switch.
-    joints: the edges that meet another part (full mitre wall and dowels); the other
+    joints: the edges that meet another part (full mitre wall and dowel holes); the other
     edges are printed in one piece with the neighbouring face."""
     return (frustum() ^ rounded_cube()) - face_cuts(port_side, pins, joints)
 
@@ -386,7 +389,7 @@ def port_cut():
     for x, zb, w in wires:
         cut = cut + box(x - w / 2, x + w / 2, -wh / 2, wh / 2, zb - WIRE_LEN, zb + 0.01)
     cut = bevel_place(cut)
-    # where the pockets and wire channels cross the pocket lips and clamp rings of both shells,
+    # where the pockets and wire channels cross the pocket lips and clamp rings of both faces,
     # clear the whole corner up to the bottom of the baffles: otherwise thin fins stay standing
     r0 = HY - CLAMP_RING - 0.01
     # (only under the narrow port cells: the full cells beside them keep their clamp ring)

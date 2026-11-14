@@ -28,7 +28,7 @@ flowchart LR
         lskin["Skin, rounded edges, baffles<br/>as on the box"] --- lmitre["Mitre walls 1.4 mm"]
     end
     edge --- bmitre["Mitre walls 1.4 mm<br/>round the opening"]
-    bmitre ---|"glued face to face<br/>8 dowels"| lmitre
+    bmitre ---|"glued face to face<br/>lid swings shut"| lmitre
 ```
 
 Every face is a folded plate of constant thickness. The outer skin, the rounded edges and the edge walls are one continuous **1.4 mm** wall, and this wall carries the load. All twelve edges are rounded to a 4 mm radius and the corners are spherical; under every rounding the light cells keep 1.4 mm away from the surface. The eight edges inside the box are a single 1.4 mm wall shared by the two faces, so the box is one stiff monolithic part. Along the four edges of the opening, the box and the lid each have a 1.4 mm mitre wall; they lie face to face over their whole width (about 10 mm) and form the only glue joint.
@@ -37,7 +37,7 @@ Inside the skin, **1.3 mm** baffles split the light into 8×8 funnel cells. Each
 
 The panel sits in a pocket with a short lip at its edge. A clamp ring rests on the panel margin, outside the LEDs and the capacitors; the baffles stop 1.3 mm above the panel. The panel backs sit 1.2 mm inside the neighbouring panel edges.
 
-Two 2 mm dowels cross each mitre between box and lid. Each hole sits in a small boss at the root of the mitre wall, centred on the baffle between the outer two LED columns and clear of the panel and the LEDs.
+The four 45° mitres centre the lid on the box. Each mitre also has two 2 mm dowel holes in small bosses at the root of the mitre wall, but they stay empty: the lid swings shut about the bottom front edge (see [Assembly](#assembly)), and a dowel square to a 45° mitre would block that.
 
 The USB-C socket and the SS12F15 switch sit on a flat pad along the middle of the bottom front edge: a 45° flat cut 2.5 mm into the rounding (about 4.9 mm wide), split between the box and the lid. They point diagonally into the wedge between the front and bottom panels. Above them the outermost cells stop short of the edge (columns 1–6 on the 65 mm cube, 2–5 on the 80 mm cube), leaving solid resin for the pockets. The leads pass between the two panel corners into the cube; with centred panels that slot is 1.7 mm wide.
 
@@ -48,7 +48,7 @@ The USB-C socket and the SS12F15 switch sit on a flat pad along the middle of th
 - every outer wall (surfaces on the outside of the cube or on a mitre) and every edge wall is at least **1.3 mm** thick, measured to the nearly parallel face behind it;
 - every feature is at least **0.8 mm** thick, counting wedges up to 45°.
 
-The thinnest outer or edge wall is 1.30 mm on the 65 mm cube and 1.37 mm on the 80 mm cube. The thinnest features are the 0.9 mm walls around the dowel holes and the 0.85 mm pocket lip of the fit-test slice.
+The thinnest outer or edge wall is 1.30 mm on the 65 mm cube and 1.37 mm on the 80 mm cube. The thinnest features are the 0.9 mm walls of the dowel bosses and the 0.85 mm pocket lip of the fit-test slice.
 
 | Dimension | 65x65 | 80x80 |
 |---|---|---|
@@ -85,7 +85,6 @@ Each profile folder holds:
 | 6 | 80 × 80 mm only: backing sheet 80 × 80 × 1 mm (aluminium, FR4 or acrylic) |
 | 1 | Snap-in USB-C socket with leads: flange 15.8 × 8.2 × 2.0, body 12.2 × 5.2, snap wings 15.6 across |
 | 1 | SS12F15 slide switch: plate 19.6 × 5.5, body 11.5 × 5.5 × 5.0, lugs 7.8 deep |
-| 8 | 2 mm dowel, about 5.5 mm long (1.75 mm filament works) |
 
 A flexible panel will not stay flat on its own: glue it to its backing sheet with thin double-sided tape or a thin layer of glue. The pocket takes a 1.6 mm stack (flexible PCB, adhesive and the 1 mm sheet). If your stack differs, change `PCB_T` and rebuild.
 
@@ -93,10 +92,14 @@ A flexible panel will not stay flat on its own: glue it to its backing sheet wit
 
 ## Assembly
 
-1. Fit the back panel first, straight in through the open front, LEDs towards the baffles. A few dots of glue on the clamp ring hold it.
-2. Fit the four side panels. Hold each one parallel to its face and about 3.3 mm in from it, LEDs outwards, slide it in through the opening until it lines up with its pocket, then press it out into the pocket. `check_fit.py` checks this path against the box and the panels already in place. On the 65 mm cube the 66 mm side runs along the long side of each pocket.
-3. Glue the switch behind its slot in the bottom face and wire the panels, ESP32 and battery inside the box.
-4. Press the front panel into the lid, put the dowels in the box's mitre holes and close the lid. Push the USB-C socket into the port pad from outside; its pocket is split between box and lid. Glue the lid along its mitres, or leave it dry-fitted so the cube can be opened again (take the USB-C socket out first).
+1. 80 × 80 mm panels only: glue each flexible panel flat onto its backing sheet.
+2. Fit the back panel first: pass it straight in through the open front, LEDs towards the back face, and press it into its pocket. A few dots of glue on the clamp ring hold it.
+3. Fit the four side panels one by one. Hold the panel parallel to its face, LEDs towards that face, about 3.3 mm short of its pocket (towards the middle of the cube), so the LEDs pass under the pocket lip at the opening. Slide it in through the opening until it is level with its pocket, then push it out into the pocket and glue it like the back panel. `check_fit.py` checks this path against the box and the panels already in place. On the 65 mm cube the 66 mm side of each panel runs along the long side of its pocket.
+4. Fit the switch from inside: lay its plate against the inside of the wall on the bottom face, lever through the slot, and glue it there. Half of the switch pocket is in the lid, but the switch is held by the box. Wire the panels, ESP32, battery and switch inside the box.
+5. Press the front panel into the lid and connect it.
+6. Close the lid by swinging it shut: rest its bottom edge on the box's bottom front edge, then swing the top of the lid down until all four mitres sit. Pushed straight on, the lid would hit the switch plate. The mitres centre the lid; leave the dowel holes empty.
+7. Push the USB-C socket into the port pad from outside until its snap wings click in behind the wall; its pocket is split between box and lid.
+8. Glue the lid along its mitres, or hold it with a few dots of hot glue or tape so the cube can be opened again. To open it, take the USB-C socket out, then swing the lid open about the bottom edge.
 
 The edge walls are translucent, so some light passes from the edge cells of one face into the next. Along the lid, painting the mitre faces white or black before gluing stops it; inside the box the edge walls are shared, so a little bleed stays.
 
