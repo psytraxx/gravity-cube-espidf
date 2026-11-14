@@ -56,7 +56,7 @@ code { font-family: var(--font-mono); font-size: 13px; }
   <header>
     <h1>Voxel Skin <span id="h-profile"></span></h1>
     <nav class="profiles" aria-label="Panel size"><a href="?p=65x65" id="p-65x65">65 × 66 mm panels</a><a href="?p=80x80" id="p-80x80">80 × 80 mm panels</a></nav>
-    <p class="lede">This shows the actual STL files: a translucent resin cube whose six faces each hold <span id="l-panel"></span>. Every face is a folded plate: the skin, the rounded edges and the edge walls are one continuous <span id="l-skin"></span> mm wall that carries the load, and thin baffles inside it fan the light out so the pixels cover <span id="l-lit"></span> mm of each <span id="l-cube"></span> mm face. Five faces print as one open box and the front face is the lid. Drag to turn the cube and use the slider to lift the lid off. The clear USB-C socket and green slide switch sit on a flat pad cut into the rounded bottom front edge.</p>
+    <p class="lede">This shows the actual STL files: a translucent resin cube whose six faces each hold <span id="l-panel"></span>. Every face is a folded plate: the skin, the rounded edges and the edge walls are one continuous <span id="l-skin"></span> mm wall that carries the load, and thin baffles inside it fan the light out so the pixels cover <span id="l-lit"></span> mm of each <span id="l-cube"></span> mm face. Five faces print as one open box and the front face is the lid. Drag to turn the cube and use the slider to lift the lid off (in real life it swings open about the bottom edge). The clear USB-C socket and green slide switch sit on a flat pad cut into the rounded bottom front edge.</p>
   </header>
 
   <div class="stage" id="stage">
@@ -94,15 +94,15 @@ code { font-family: var(--font-mono); font-size: 13px; }
         <tr id="b-sheet-row"><td>6 ×</td><td>Backing sheet 80 × 80 × 1 mm, aluminium or FR4, glued behind each panel (panel + glue + sheet = 1.6 mm)</td></tr>
         <tr><td>1 ×</td><td>Snap-in USB-C socket with leads (flange 15.8 × 8.2, body 12.2 × 5.2)</td></tr>
         <tr><td>1 ×</td><td>SS12F15 slide switch (19.6 × 5.5 plate), glued in</td></tr>
-        <tr><td>8 ×</td><td>2 mm dowel, about 5.5 mm long (1.75 mm filament works), between box and lid</td></tr>
       </table>
     </section>
     <section class="card">
       <h2>Assembly</h2>
       <ol>
         <li id="a-panel"></li>
-        <li>Fit the switch behind its slot in the bottom face and wire the panels, ESP32 and battery inside the box.</li>
-        <li>Put the lid on with its panel and dowels, then push the USB-C socket into the port pad from outside; its pocket is split between box and lid. Glue the lid along its mitres, or leave it dry-fitted so the cube can be opened again.</li>
+        <li>Fit the switch from inside: plate against the inside of the wall on the bottom face, lever through the slot, glued to the box. Wire the panels, ESP32, battery and switch inside the box.</li>
+        <li>Press the front panel into the lid. Close the lid by swinging it shut: rest its bottom edge on the box's bottom front edge, then swing the top down until all four mitres sit (pushed straight on, it would hit the switch plate). The mitres centre the lid; the dowel holes stay empty.</li>
+        <li>Push the USB-C socket into the port pad from outside; its pocket is split between box and lid. Glue the lid along its mitres, or hold it with a few dots of hot glue or tape. To open the cube, take the USB-C socket out and swing the lid open about the bottom edge.</li>
       </ol>
     </section>
   </div>
@@ -197,7 +197,7 @@ code { font-family: var(--font-mono); font-size: 13px; }
     set('l-panel', flex ? 'one flexible 80 × 80 mm WS2812 8×8 panel glued to a 1 mm backing sheet' : 'one 65 × 66 mm WS2812 8×8 panel');
     set('l-skin', f1(SKIN)); set('l-lit', lit); set('l-cube', cubeMm); set('hud-cube', cubeMm + ' mm cube · box + lid');
     set('b-panel', panel); document.getElementById('b-sheet-row').hidden = !flex;
-    set('a-panel', (flex ? 'Glue each flexible panel flat onto its backing sheet. ' : '') + 'Fit the back panel first, straight through the open front. Slide each side panel in a few millimetres in from its face, LEDs outwards, and press it out into its pocket. A few dots of glue on the clamp rings hold the panels.');
+    set('a-panel', (flex ? 'Glue each flexible panel flat onto its backing sheet. ' : '') + 'Fit the back panel first, straight through the open front, LEDs towards the back face. Then fit each side panel: hold it parallel to its face, LEDs towards that face, about 3.3 mm short of its pocket, slide it in through the opening until it is level with the pocket and push it out into place. A few dots of glue on the clamp rings hold the panels.');
     document.querySelectorAll('a[data-stl]').forEach(a => a.href = P + '/' + a.dataset.stl);
     const dims = [[cubeMm + ' mm', 'Outer cube edge'], [lit + ' mm', 'Lit width per face: the cells fan out from the LEDs to the mitre walls'],
       [f1(SKIN) + ' mm', 'Skin, rounded edges and edge walls: one folded structural wall'], [f1(CFG.baffle) + ' mm', 'Light baffles, measured square to their faces'],
@@ -221,7 +221,7 @@ code { font-family: var(--font-mono); font-size: 13px; }
       for (const c of skinCells(PORT_SIDE[name] || 0)) {
         const x = (c.i + 0.5) * PITCH - H, y = (c.j + 0.5) * PITCH - H;
         d.position.set(x, y, Z_PCB + 1.6); d.scale.set(1, 1, 1); d.updateMatrix(); lens.setMatrixAt(k, d.matrix);
-        // pixel sits just outside the skin, so it shows in both shell modes
+        // pixel sits just outside the skin, so it shows in both display modes
         d.position.set(c.x, c.y, Z_SKIN + SKIN + 0.05); d.scale.set(c.w * 1.25, c.h * 1.25, 1); d.updateMatrix(); glow.setMatrixAt(k, d.matrix);
         pixels.push({ pos: new THREE.Vector3(c.x, c.y, Z_SKIN).applyEuler(g.rotation), mesh: k, face: faceGroups.length });
         k++;
@@ -236,7 +236,7 @@ code { font-family: var(--font-mono); font-size: 13px; }
       if (name === 'front') {
         const [u, m, lb, lr, s] = await Promise.all(['part_usb_c_socket.stl', 'part_usb_c_metal.stl', 'part_usb_c_lead_black.stl',
           'part_usb_c_lead_red.stl', 'part_slide_switch_ss12f15.stl'].map(load));
-        // parts are exported in cube coordinates; front shell has no rotation
+        // parts are exported in cube coordinates; the lid (front face) has no rotation
         const housing = new THREE.Mesh(u, usbMat); housing.renderOrder = 4;
         g.add(housing, new THREE.Mesh(m, metalMat), new THREE.Mesh(lb, blackMat), new THREE.Mesh(lr, redMat), new THREE.Mesh(s, swMat));
       }
