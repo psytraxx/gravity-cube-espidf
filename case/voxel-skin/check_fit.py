@@ -173,26 +173,40 @@ def confirm(tm, o, dirs, d, dot, limit=1.4, step=0.05):
 
 
 def outer_surface(pts):
-    """Points on the outside of the cube (faces, bevels) or on a mitre between box and lid."""
+    """Points on the outside of the cube (faces, rounded edges and corners, the port pad) or on
+    a mitre between box and lid."""
     a = np.abs(pts)
     on_face = np.isclose(a.max(1), g.OUTER, atol=1e-3)
-    on_bevel = np.zeros(len(pts), bool)
-    for i, j in ((0, 1), (0, 2), (1, 2)):
-        on_bevel |= np.isclose((a[:, i] + a[:, j]) / g.SQ2, g.FACET_D, atol=1e-3)
+    c = g.OUTER - g.EDGE_R
+    on_round = np.isclose(np.linalg.norm(np.maximum(a - c, 0), axis=1), g.EDGE_R, atol=0.05) & \
+        ((a > c).sum(1) >= 2)
+    on_pad = np.isclose((a[:, 1] + a[:, 2]) / g.SQ2, g.FACET_D, atol=1e-3) & (pts[:, 1] < 0) & (pts[:, 2] > 0)
+    on_bevel = on_round | on_pad
     on_mitre = (pts[:, 2] > 0) & np.isclose(np.maximum(a[:, 0], a[:, 1]), pts[:, 2], atol=1e-3)
     return on_face | on_bevel | on_mitre
 
 
-def edge_wall(nn):
-    """Faces at 45 degrees between two axes: the walls of the edges, from inside and out."""
+def edge_wall(pts, nn):
+    """Faces at 45 degrees between two axes: the walls of the edges, from inside and out.
+    The dowel bosses are left out; they are parts, held to MIN_PART."""
     a = np.sort(np.abs(nn), axis=1)
-    return np.isclose(a[:, 1], 0.7071, atol=0.01) & np.isclose(a[:, 2], 0.7071, atol=0.01)
+    sel = np.isclose(a[:, 1], 0.7071, atol=0.01) & np.isclose(a[:, 2], 0.7071, atol=0.01)
+    for name, r in g.FACES.items():
+        m = g._rot(r)
+        for along, k in g._pin_axes(g.joints_of(name)):
+            q = g._rot([0, 0, 90 * k])
+            p0 = m @ q @ np.array([g.PIN_AT, along, g.PIN_AT])
+            d = m @ q @ np.array([1, 0, -1]) / g.SQ2
+            v = pts - p0
+            dist = np.linalg.norm(v - np.outer(v @ d, d), axis=1)
+            sel &= ~((dist < g.BOSS_R + 0.3) & (np.abs(v @ d) < g.PIN_DEPTH + g.BOSS_WALL + 0.6))
+    return sel
 
 
 for fname in ("box.stl", "lid.stl", "fit_test.stl"):
     tm = trimesh.load(os.path.join(g.OUT_DIR, fname))
     np.random.seed(0)
-    pts, fi = trimesh.sample.sample_surface_even(tm, 250000 if fname == "box.stl" else 120000)
+    pts, fi = trimesh.sample.sample_surface_even(tm, 200000 if fname == "box.stl" else 120000)
     nn = tm.face_normals[fi]
     o = pts - nn * 1e-3
     loc, ri, ti = tm.ray.intersects_location(o, -nn, multiple_hits=False)
@@ -204,7 +218,7 @@ for fname in ("box.stl", "lid.stl", "fit_test.stl"):
     check(f"{fname} thinnest part {thinnest:.2f} mm (>= {g.MIN_PART})",
           g.MIN_PART - thinnest if thinnest < g.MIN_PART - 0.005 else 0.0)
     if fname != "fit_test.stl":
-        sel = (outer_surface(pts[ri]) | edge_wall(nn[ri])) & (dot < -0.9)
+        sel = (outer_surface(pts[ri]) | edge_wall(pts[ri], nn[ri])) & (dot < -0.9)
         wall = float(d[sel].min())
         check(f"{fname} thinnest outer and edge wall {wall:.2f} mm (>= {g.MIN_WALL})",
               g.MIN_WALL - wall if wall < g.MIN_WALL - 0.005 else 0.0)

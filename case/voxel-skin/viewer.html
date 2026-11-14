@@ -56,7 +56,7 @@ code { font-family: var(--font-mono); font-size: 13px; }
   <header>
     <h1>Voxel Skin <span id="h-profile"></span></h1>
     <nav class="profiles" aria-label="Panel size"><a href="?p=65x65" id="p-65x65">65 × 66 mm panels</a><a href="?p=80x80" id="p-80x80">80 × 80 mm panels</a></nav>
-    <p class="lede">This shows the actual STL files: a translucent resin cube whose six faces each hold <span id="l-panel"></span>. Every face is a folded plate: the skin, the edge bevels and the edge walls are one continuous <span id="l-skin"></span> mm wall that carries the load, and thin baffles inside it fan the light out so the pixels cover <span id="l-lit"></span> mm of each <span id="l-cube"></span> mm face. Five faces print as one open box and the front face is the lid. Drag to turn the cube and use the slider to lift the lid off. The clear USB-C socket and green slide switch sit on the 45° bevel of the bottom front edge.</p>
+    <p class="lede">This shows the actual STL files: a translucent resin cube whose six faces each hold <span id="l-panel"></span>. Every face is a folded plate: the skin, the rounded edges and the edge walls are one continuous <span id="l-skin"></span> mm wall that carries the load, and thin baffles inside it fan the light out so the pixels cover <span id="l-lit"></span> mm of each <span id="l-cube"></span> mm face. Five faces print as one open box and the front face is the lid. Drag to turn the cube and use the slider to lift the lid off. The clear USB-C socket and green slide switch sit on a flat pad cut into the rounded bottom front edge.</p>
   </header>
 
   <div class="stage" id="stage">
@@ -83,7 +83,7 @@ code { font-family: var(--font-mono); font-size: 13px; }
       <table>
         <tr><td><a data-stl="box.stl" download>box.stl</a></td><td>× 1. Back, top, bottom, left and right faces in one part, open at the front.</td></tr>
         <tr><td><a data-stl="lid.stl" download>lid.stl</a></td><td>× 1. The front face; holds the USB-C cut-out and switch slot with the bottom face.</td></tr>
-        <tr><td><a data-stl="fit_test.stl" download>fit_test.stl</a></td><td>Optional, order first. A cheap slice of one shell (pocket lip, clamp ring, bottom of the baffles) to test-fit a real panel.</td></tr>
+        <tr><td><a data-stl="fit_test.stl" download>fit_test.stl</a></td><td>Optional, order first. A cheap slice of one face (pocket lip and clamp ring) to check that a real panel seats in its pocket.</td></tr>
         <tr><td>Material</td><td>Translucent or clear resin for every part. Sand or bead-blast the outside for an even frosted glow.</td></tr>
       </table>
     </section>
@@ -102,7 +102,7 @@ code { font-family: var(--font-mono); font-size: 13px; }
       <ol>
         <li id="a-panel"></li>
         <li>Fit the switch behind its slot in the bottom face and wire the panels, ESP32 and battery inside the box.</li>
-        <li>Put the lid on with its panel and dowels, then push the USB-C socket into the bevel from outside; its pocket is split between box and lid. Glue the lid along its mitres, or leave it dry-fitted so the cube can be opened again.</li>
+        <li>Put the lid on with its panel and dowels, then push the USB-C socket into the port pad from outside; its pocket is split between box and lid. Glue the lid along its mitres, or leave it dry-fitted so the cube can be opened again.</li>
       </ol>
     </section>
   </div>
@@ -200,7 +200,7 @@ code { font-family: var(--font-mono); font-size: 13px; }
     set('a-panel', (flex ? 'Glue each flexible panel flat onto its backing sheet. ' : '') + 'Fit the back panel first, straight through the open front. Slide each side panel in a few millimetres in from its face, LEDs outwards, and press it out into its pocket. A few dots of glue on the clamp rings hold the panels.');
     document.querySelectorAll('a[data-stl]').forEach(a => a.href = P + '/' + a.dataset.stl);
     const dims = [[cubeMm + ' mm', 'Outer cube edge'], [lit + ' mm', 'Lit width per face: the cells fan out from the LEDs to the mitre walls'],
-      [f1(SKIN) + ' mm', 'Skin, bevel and mitre walls: one folded structural wall'], [f1(CFG.baffle) + ' mm', 'Light baffles, measured square to their faces'],
+      [f1(SKIN) + ' mm', 'Skin, rounded edges and edge walls: one folded structural wall'], [f1(CFG.baffle) + ' mm', 'Light baffles, measured square to their faces'],
       [f1(CFG.z_skin - CFG.z_pcb - 1.6) + ' mm', 'From the top of the LEDs to the skin'], ['≈ ' + f1(CFG.box_cm3 + CFG.lid_cm3) + ' cm³', 'Resin: box ' + f1(CFG.box_cm3) + ' + lid ' + f1(CFG.lid_cm3) + ' cm³']];
     document.getElementById('dims').innerHTML = dims.map(([n, l]) => `<div class="dim"><span class="n">${n}</span><span class="l">${l}</span></div>`).join('');
   }

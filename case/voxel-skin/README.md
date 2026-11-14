@@ -19,27 +19,27 @@ View it in 3D: <https://psytraxx.github.io/gravity-cube-espidf/voxel-skin/viewer
 ```mermaid
 flowchart LR
     subgraph box["box.stl: back, top, bottom, left, right"]
-        skin["Skin 1.4 mm<br/>diffuser + main wall"] --- bevel["Edge bevel<br/>1.4 mm under the facet"]
+        skin["Skin 1.4 mm<br/>diffuser + main wall"] --- bevel["Rounded edge, R 4 mm<br/>1.4 mm wall under it"]
         bevel --- edge["Edge wall 1.4 mm<br/>shared by two faces"]
         skin --- baffles["Baffles 1.3 mm<br/>8×8 funnel cells"]
         edge --- ring["Clamp ring + pocket lip<br/>hold the panel"]
     end
     subgraph lid["lid.stl: front"]
-        lskin["Skin, bevels, baffles<br/>as on the box"] --- lmitre["Mitre walls 1.4 mm"]
+        lskin["Skin, rounded edges, baffles<br/>as on the box"] --- lmitre["Mitre walls 1.4 mm"]
     end
     edge --- bmitre["Mitre walls 1.4 mm<br/>round the opening"]
     bmitre ---|"glued face to face<br/>8 dowels"| lmitre
 ```
 
-Every face is a folded plate of constant thickness. The outer skin, the 45° edge bevels and the edge walls are one continuous **1.4 mm** wall, and this wall carries the load. The eight edges inside the box are a single 1.4 mm wall shared by the two faces, so the box is one stiff monolithic part. Along the four edges of the opening, the box and the lid each have a 1.4 mm mitre wall; they lie face to face over their whole width (about 10 mm) and form the only glue joint.
+Every face is a folded plate of constant thickness. The outer skin, the rounded edges and the edge walls are one continuous **1.4 mm** wall, and this wall carries the load. All twelve edges are rounded to a 4 mm radius and the corners are spherical; under every rounding the light cells keep 1.4 mm away from the surface. The eight edges inside the box are a single 1.4 mm wall shared by the two faces, so the box is one stiff monolithic part. Along the four edges of the opening, the box and the lid each have a 1.4 mm mitre wall; they lie face to face over their whole width (about 10 mm) and form the only glue joint.
 
-Inside the skin, **1.3 mm** baffles split the light into 8×8 funnel cells. Each baffle stands square to the face beside the LEDs, widens over 1 mm just above them and then fans out to its place on the skin. Sloped baffles are wider along the face so that they stay 1.3 mm thick square to their faces. The outermost cells run out to the edge walls, which reflect their light, so the pixels reach almost to the bevels and no solid material runs along the edges.
+Inside the skin, **1.3 mm** baffles split the light into 8×8 funnel cells. Each baffle is a strip of constant thickness, bent just above the LEDs: square to the face beside them, then sloping out to its place on the skin. As on a bent strip, the face on the inside of the bend starts to slope a little lower than the other, so the baffle stays 1.3 mm thick through the bend; the bend is placed so that this stays above the LEDs. The outermost cells run out to the edge walls, which reflect their light, so the pixels reach almost to the rounded edges and no solid material runs along the edges.
 
 The panel sits in a pocket with a short lip at its edge. A clamp ring rests on the panel margin, outside the LEDs and the capacitors; the baffles stop 1.3 mm above the panel. The panel backs sit 1.2 mm inside the neighbouring panel edges.
 
 Two 2 mm dowels cross each mitre between box and lid. Each hole sits in a small boss at the root of the mitre wall, centred on the baffle between the outer two LED columns and clear of the panel and the LEDs.
 
-The USB-C socket and the SS12F15 switch sit on the bevel of the bottom front edge, between the box and the lid, and point diagonally into the wedge between the front and bottom panels. Above them the outermost cells stop short of the edge (columns 1–6 on the 65 mm cube, 2–5 on the 80 mm cube), leaving solid resin for the pockets. The leads pass between the two panel corners into the cube; with centred panels that slot is 1.7 mm wide.
+The USB-C socket and the SS12F15 switch sit on a flat pad along the middle of the bottom front edge: a 45° flat cut 2.5 mm into the rounding (about 4.9 mm wide), split between the box and the lid. They point diagonally into the wedge between the front and bottom panels. Above them the outermost cells stop short of the edge (columns 1–6 on the 65 mm cube, 2–5 on the 80 mm cube), leaving solid resin for the pockets. The leads pass between the two panel corners into the cube; with centred panels that slot is 1.7 mm wide.
 
 ### Wall rules
 
@@ -48,17 +48,18 @@ The USB-C socket and the SS12F15 switch sit on the bevel of the bottom front edg
 - every outer wall (surfaces on the outside of the cube or on a mitre) and every edge wall is at least **1.3 mm** thick, measured to the nearly parallel face behind it;
 - every feature is at least **0.8 mm** thick, counting wedges up to 45°.
 
-The thinnest outer wall is 1.37 mm (beside the port pockets). The thinnest features are the 0.9 mm walls around the dowel holes and the 0.85 mm pocket lip of the fit-test slice.
+The thinnest outer wall is 1.37 mm (beside the port pockets). The thinnest features are the 0.9 mm walls around the dowel holes.
 
 | Dimension | 65x65 | 80x80 |
 |---|---|---|
-| Skin, bevel, edge and mitre walls | 1.4 | 1.4 |
+| Skin, rounded edges, edge and mitre walls | 1.4 | 1.4 |
 | Baffles | 1.3 | 1.3 |
 | LED to baffle (centred grid) | 0.91 | 1.85 |
 | Top of the LEDs to the skin | 4.2 | 4.2 |
 | Panel back to the neighbouring panel edge | 1.2 | 1.2 |
 | Clamp ring on the panel margin | 0.6 | 0.6 |
-| Bevel depth | 2.5 | 2.5 |
+| Edge radius | 4 | 4 |
+| Port pad depth (from the sharp edge) | 2.5 | 2.5 |
 
 ## Files
 
@@ -68,7 +69,7 @@ Each profile folder holds:
 |---|---|---|
 | `box.stl` | 1 | Back, top, bottom, left and right faces in one part, open at the front; in cube coordinates |
 | `lid.stl` | 1 | Front face, with the USB-C cut-out and switch slot (the bottom face holds the other half) |
-| `fit_test.stl` | optional | Pocket lip, clamp ring and the bottom of the baffles; order it first to test-fit a real panel |
+| `fit_test.stl` | optional | Pocket lip and clamp ring of one face; order it first to check that a real panel seats in its pocket |
 | `part_*.stl` | – | USB-C socket and switch reference models, in cube coordinates (not printed) |
 | `profile.json` | – | Dimensions the viewer reads |
 
@@ -95,7 +96,7 @@ A flexible panel will not stay flat on its own: glue it to its backing sheet wit
 1. Fit the back panel first, straight in through the open front, LEDs towards the baffles. A few dots of glue on the clamp ring hold it.
 2. Fit the four side panels. Hold each one parallel to its face and about 3.3 mm in from it, LEDs outwards, slide it in through the opening until it lines up with its pocket, then press it out into the pocket. `check_fit.py` checks this path against the box and the panels already in place. On the 65 mm cube the 66 mm side runs along the long side of each pocket.
 3. Glue the switch behind its slot in the bottom face and wire the panels, ESP32 and battery inside the box.
-4. Press the front panel into the lid, put the dowels in the box's mitre holes and close the lid. Push the USB-C socket into the bevel from outside; its pocket is split between box and lid. Glue the lid along its mitres, or leave it dry-fitted so the cube can be opened again (take the USB-C socket out first).
+4. Press the front panel into the lid, put the dowels in the box's mitre holes and close the lid. Push the USB-C socket into the port pad from outside; its pocket is split between box and lid. Glue the lid along its mitres, or leave it dry-fitted so the cube can be opened again (take the USB-C socket out first).
 
 The edge walls are translucent, so some light passes from the edge cells of one face into the next. Along the lid, painting the mitre faces white or black before gluing stops it; inside the box the edge walls are shared, so a little bleed stays.
 
