@@ -42,5 +42,6 @@
  "port_edge": 33.0,
  "skin": 1.4,
  "baffle": 1.3,
- "shell_cm3": 21.3
+ "box_cm3": 102.7,
+ "lid_cm3": 21.5
 }

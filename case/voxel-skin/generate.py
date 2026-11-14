@@ -190,23 +190,27 @@ def chamfered_cube(inset=0.0):
     return c
 
 
-def _pin_axes():
-    """(along, quarter turn) for every dowel of one shell."""
-    return [(s * a, k) for a in PIN_ALONG for s in (-1, 1) for k in range(4)]
+# The four edges of a face, as quarter turns about its normal: 0 = +X, 1 = +Y, 2 = -X, 3 = -Y.
+ALL_EDGES = (0, 1, 2, 3)
 
 
-def pin_holes():
+def _pin_axes(joints=ALL_EDGES):
+    """(along, quarter turn) for every dowel on the given edges of one face."""
+    return [(s * a, k) for a in PIN_ALONG for s in (-1, 1) for k in joints]
+
+
+def pin_holes(joints=ALL_EDGES):
     holes = []
-    for along, k in _pin_axes():
+    for along, k in _pin_axes(joints):
         h = Manifold.cylinder(PIN_DEPTH * 2, PIN_D / 2, PIN_D / 2, SEG, True)
         holes.append(h.rotate([0, -45, 0]).translate([PIN_AT, along, PIN_AT]).rotate([0, 0, 90 * k]))
     return sum_all(holes)
 
 
-def pin_bosses():
+def pin_bosses(joints=ALL_EDGES):
     """Solid around each dowel hole on this shell's side of the mitre."""
     out = []
-    for along, k in _pin_axes():
+    for along, k in _pin_axes(joints):
         b = Manifold.cylinder(PIN_DEPTH + BOSS_WALL + 0.5, BOSS_R, BOSS_R, SEG).translate([0, 0, -0.5])
         out.append(b.rotate([0, -45, 0]).translate([PIN_AT, along, PIN_AT]).rotate([0, 0, 90 * k]))
     return sum_all(out)
@@ -227,9 +231,11 @@ def _half(k):
     return BAFFLE / 2 / math.cos(math.atan2(abs(SKIN_LINES[k] - LED_LINES[k]), RISE))
 
 
-def _edge(z):
-    """Inner face of the mitre wall at height z."""
-    return z - MITRE_OFF
+def _edge(z, joint=True):
+    """Inner face of the mitre wall at height z. A joint between two parts has a full
+    MITRE_T wall on each side; where two faces are printed as one, each face takes half
+    and the edge is a single MITRE_T wall."""
+    return z - (MITRE_OFF if joint else MITRE_OFF / 2)
 
 
 def _baffle(k, z):
@@ -251,21 +257,22 @@ def _baffle(k, z):
     return l0 + t * (l1 - l0), r0 + t * (r1 - r0)
 
 
-def _bounds(i, z, port):
+def _bounds(i, z, port, joint_lo=True, joint_hi=True):
     """(lo, hi) of cell column i at height z. port = -1 / +1 narrows the outer
-    cell on the -/+ side to PORT_BOTTOM beside the LEDs and PORT_EDGE at the skin."""
+    cell on the -/+ side to PORT_BOTTOM beside the LEDs and PORT_EDGE at the skin.
+    joint_lo / joint_hi: whether the -/+ edge is a joint (see _edge)."""
     def outer(sign):
         if port == sign:
             t = max(0.0, (z - Z_KINK) / RISE)
             return PORT_BOTTOM + t * (PORT_EDGE - PORT_BOTTOM)
-        return _edge(z)
+        return _edge(z, joint_hi if sign > 0 else joint_lo)
 
     lo = -outer(-1) if i == 0 else _baffle(i, z)[1]
     hi = outer(1) if i == GRID_N - 1 else _baffle(i + 1, z)[0]
     return lo, hi
 
 
-def _cell(i, j, port_side):
+def _cell(i, j, port_side, joints=ALL_EDGES):
     """One cell: hulls between the levels where its sides change slope."""
     py = port_side if i in PORT_COLS else 0
     levels = (Z_GRID - 0.01, Z_KINK, Z_TAPER, Z_SKIN)
@@ -273,34 +280,38 @@ def _cell(i, j, port_side):
     for z0, z1 in zip(levels, levels[1:]):
         pts = []
         for z in (z0, z1):
-            x0, x1 = _bounds(i, z, 0)
-            y0, y1 = _bounds(j, z, py)
+            x0, x1 = _bounds(i, z, 0, 2 in joints, 0 in joints)
+            y0, y1 = _bounds(j, z, py, 3 in joints, 1 in joints)
             pts += [[x, y, z] for x in (x0, x1) for y in (y0, y1)]
         parts.append(Manifold.hull_points(np.array(pts)))
     return sum_all(parts)
 
 
-def light_cells(port_side=0):
+def light_cells(port_side=0, joints=ALL_EDGES):
     """The GRID_N x GRID_N cells of one face (as solids to subtract), kept BEVEL_T inside the bevels."""
     inner = chamfered_cube(BEVEL_T)
-    return [_cell(i, j, port_side) ^ inner for i in range(GRID_N) for j in range(GRID_N)]
+    return [_cell(i, j, port_side, joints) ^ inner for i in range(GRID_N) for j in range(GRID_N)]
 
 
-def face_shell(port_side=0, pins=True):
-    """One face shell. port_side = -1 / +1 narrows the outer cells along the
-    -Y / +Y edge in PORT_COLS, leaving solid material for the USB-C socket and switch."""
-    s = frustum() ^ chamfered_cube()
+def face_shell(port_side=0, pins=True, joints=ALL_EDGES):
+    """One face in its own frame. port_side = -1 / +1 narrows the outer cells along the
+    -Y / +Y edge in PORT_COLS, leaving solid material for the USB-C socket and switch.
+    joints: the edges that meet another part (full mitre wall and dowels); the other
+    edges are printed in one piece with the neighbouring face."""
+    return (frustum() ^ chamfered_cube()) - face_cuts(port_side, pins, joints)
+
+
+def face_cuts(port_side=0, pins=True, joints=ALL_EDGES):
+    """Everything removed from a face, in its own frame: pocket, relief, cells, dowel holes."""
     ax, ay = HX + FIT, HY + FIT
-    s = s - box(-ax, ax, -ay, ay, Z_LIP - 1, Z_PCB)  # panel pocket
     rx, ry = HX - CLAMP_RING, HY - CLAMP_RING
-    s = s - box(-rx, rx, -ry, ry, Z_PCB - 0.01, Z_GRID)  # relief over the LEDs and capacitors
-    cells = sum_all(light_cells(port_side))
-    if pins:
-        cells = cells - pin_bosses()
-    s = s - cells
-    if pins:
-        s = s - pin_holes()
-    return s
+    cut = box(-ax, ax, -ay, ay, Z_LIP - 1, Z_PCB)  # panel pocket
+    cut = cut + box(-rx, rx, -ry, ry, Z_PCB - 0.01, Z_GRID)  # relief over the LEDs and capacitors
+    cells = sum_all(light_cells(port_side, joints))
+    if pins and joints:
+        cells = cells - pin_bosses(joints)
+        cut = cut + pin_holes(joints)
+    return cut + cells
 
 
 def bevel_place(m):
@@ -460,16 +471,63 @@ def profile_info():
 
 
 FACES = {
-    "front": [0, 0, 0],  # +Z
+    "front": [0, 0, 0],  # +Z: the lid
     "back": [180, 0, 0],  # -Z
     "top": [-90, 0, 0],  # +Y
     "bottom": [90, 0, 0],  # -Y
     "right": [0, 90, 0],  # +X
     "left": [0, -90, 0],  # -X
 }
+LID = "front"
 
-# The port edge is the bottom front edge: -Y on the front shell, +Y on the bottom shell.
+# The port edge is the bottom front edge: -Y on the front face, +Y on the bottom face.
 PORT_FACES = {"front": -1, "bottom": 1}
+
+
+def _rot(rot):
+    """3x3 matrix of Manifold.rotate(rot) for the single-axis rotations in FACES."""
+    m = np.eye(3)
+    for axis, deg in enumerate(rot):
+        if deg:
+            c, s_ = math.cos(math.radians(deg)), math.sin(math.radians(deg))
+            r = np.eye(3)
+            a, b = [(1, 2), (2, 0), (0, 1)][axis]
+            r[a, a], r[a, b], r[b, a], r[b, b] = c, -s_, s_, c
+            m = r @ m
+    return m
+
+
+EDGE_DIRS = {0: (1, 0, 0), 1: (0, 1, 0), 2: (-1, 0, 0), 3: (0, -1, 0)}
+
+
+def joints_of(name):
+    """Edges of a face that meet another part: the lid has four, the box faces next to it
+    one each (towards the lid), the back none."""
+    if name == LID:
+        return ALL_EDGES
+    lid_n = _rot(FACES[LID]) @ np.array([0, 0, 1.0])
+    return tuple(k for k, d in EDGE_DIRS.items() if np.allclose(_rot(FACES[name]) @ np.array(d, float), lid_n))
+
+
+def placed_face(name):
+    """One face, with its port side and joints, in cube coordinates."""
+    return face_shell(PORT_FACES.get(name, 0), joints=joints_of(name)).rotate(FACES[name])
+
+
+def box_and_lid(cut=None):
+    """The five faces printed as one open box, and the lid, both in cube coordinates.
+
+    The box is cut from one solid (bevelled cube minus the interior and the lid's
+    frustum), so the faces share their edges without seams."""
+    cut = port_cut() if cut is None else cut
+    lid_space = Manifold.hull_points(np.array([[sx * z, sy * z, z] for z in (Z_LIP - 0.01, OUTER + 1)
+                                               for sx in (-1, 1) for sy in (-1, 1)])).rotate(FACES[LID])
+    box_ = chamfered_cube() - box(-Z_LIP, Z_LIP, -Z_LIP, Z_LIP, -Z_LIP, Z_LIP) - lid_space
+    for n in FACES:
+        if n != LID:
+            box_ = box_ - face_cuts(PORT_FACES.get(n, 0), joints=joints_of(n)).rotate(FACES[n])
+    lid = placed_face(LID) - cut
+    return box_ - cut, lid
 
 
 def unplace(m, rot):
@@ -484,21 +542,13 @@ def to_trimesh(m):
 def main():
     out = OUT_DIR
     os.makedirs(out, exist_ok=True)
-    shell = face_shell()
-    cut = port_cut()
-    parts = {"shell.stl": shell, "fit_test.stl": fit_test()}
-    placed = {}
-    for name, rot in FACES.items():
-        if name in PORT_FACES:
-            p = face_shell(PORT_FACES[name]).rotate(rot) - cut
-            parts[f"shell_port_{name}.stl"] = unplace(p, rot)
-        else:
-            p = shell.rotate(rot)
-        placed[name] = p
-    total = 0.0
+    box_, lid = box_and_lid()
+    parts = {"box.stl": box_, "lid.stl": unplace(lid, FACES[LID]), "fit_test.stl": fit_test()}
+    vols = {}
     for fname, m in parts.items():
         t = to_trimesh(m)
         t.export(os.path.join(out, fname))
+        vols[fname] = t.volume / 1000
         print(f"{fname:24s} watertight={t.is_watertight} volume={t.volume / 1000:.1f} cm3 "
               f"bbox={np.round(t.extents, 2)}")
     usb = usb_socket_parts()
@@ -508,12 +558,10 @@ def main():
     for fname, m in refs.items():
         to_trimesh(m).export(os.path.join(out, fname))
         print(f"{fname:24s} (reference only, placed in cube coordinates)")
-    cube = sum_all(list(placed.values()))
-    t = to_trimesh(cube)
-    t.export(os.path.join(out, "assembly_preview.stl"))
-    print(f"assembly_preview.stl     edge={t.extents[0]:.1f} mm  volume={t.volume / 1000:.1f} cm3")
+    print(f"cube {2 * OUTER:.1f} mm, resin {vols['box.stl'] + vols['lid.stl']:.1f} cm3")
     info = profile_info()
-    info["shell_cm3"] = round(to_trimesh(shell).volume / 1000, 1)
+    info["box_cm3"] = round(vols["box.stl"], 1)
+    info["lid_cm3"] = round(vols["lid.stl"], 1)
     with open(os.path.join(out, "profile.json"), "w") as f:
         json.dump(info, f, indent=1)
         f.write("\n")
